@@ -1,3 +1,6 @@
 /target/
 /miglayout15-swing.jar
 /miglayout-src.zip
+/.settings/
+/.classpath
+/wbp-meta/
