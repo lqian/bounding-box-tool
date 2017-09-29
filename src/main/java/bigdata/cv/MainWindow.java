@@ -91,7 +91,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				currentImageIndex = 0;
-				imagePanel.setImageFile(imageFiles[currentImageIndex]);
+				imagePanel.load(imageFiles[currentImageIndex]);
 			}
 		});
 		
@@ -100,7 +100,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (currentImageIndex < imageFiles.length - 1) {
-					imagePanel.setImageFile(imageFiles[++currentImageIndex]);
+					imagePanel.load(imageFiles[++currentImageIndex]);
 				}
 			}
 		});
@@ -110,7 +110,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (currentImageIndex > 0) {
-					imagePanel.setImageFile(imageFiles[--currentImageIndex]);
+					imagePanel.load(imageFiles[--currentImageIndex]);
 				}
 			}
 		});
@@ -120,7 +120,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				currentImageIndex = imageFiles.length - 1;
-				imagePanel.setImageFile(imageFiles[currentImageIndex]);
+				imagePanel.load(imageFiles[currentImageIndex]);
 				
 			}
 		});
@@ -223,10 +223,10 @@ public class MainWindow {
 		btnFirst = new JButton("|<");
 		navPanel.add(btnFirst);
 
-		btnPreviouse = new JButton("<<");
+		btnPreviouse = new JButton("<");
 		navPanel.add(btnPreviouse);
 
-		btnNext = new JButton(">>");
+		btnNext = new JButton(">");
 		navPanel.add(btnNext);
 
 		btnLast = new JButton(">|");
@@ -309,7 +309,7 @@ public class MainWindow {
 				valTotalLabel.setText(String.valueOf(totalBoudingBoxLabels));
 				if (labelFiles.size() == 0) {
 					currentImageIndex = 0;
-					imagePanel.setImageFile(imageFiles[0]);
+					imagePanel.load(imageFiles[0]);
 				} else {
 					// TODO skip the first un-label image
 
