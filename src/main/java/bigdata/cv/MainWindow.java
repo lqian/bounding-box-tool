@@ -1,32 +1,39 @@
 package bigdata.cv;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.PriorityQueue;
 
 import javax.swing.AbstractAction;
-import javax.swing.AbstractListModel;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.JToolBar;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
-import javax.swing.border.LineBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+import static javax.swing.JOptionPane.*;
 
 public class MainWindow {
 
@@ -36,7 +43,7 @@ public class MainWindow {
 	int totalFile;
 	int totalBoudingBoxLabels;
 
-	String[] imageFiles;
+	List<String> imageFiles = new ArrayList<String>();
 
 	PriorityQueue<String> labelFiles = new PriorityQueue<String>();
 
@@ -49,11 +56,20 @@ public class MainWindow {
 	int currentImageIndex = -1;
 
 	ImagePanel imagePanel = new ImagePanel();
-	JPanel centerPanel;
 	private JButton btnFirst;
 	private JButton btnPreviouse;
 	private JButton btnNext;
 	private JButton btnLast;
+	private JLabel lblFileName;
+
+	JTable tblBoudingBox;
+	DefaultListModel<String> listModel = new DefaultListModel<String>();
+	private JButton btnCleanBoundingBox;
+	private JButton btnRemoveBoundingBox;
+	private JButton btnOpen;
+	private JButton btnDelPicture;
+	private JButton btnAbout;
+	private JButton btnConvert;
 
 	/**
 	 * Launch the application.
@@ -74,7 +90,6 @@ public class MainWindow {
 	/**
 	 * Create the application.
 	 */
-	@SuppressWarnings("serial")
 	public MainWindow() {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -84,46 +99,105 @@ public class MainWindow {
 
 		initialize();
 
-		centerPanel.add(imagePanel, BorderLayout.CENTER);
+		initActions();
+	}
 
-		btnFirst.addActionListener(new ActionListener () {
+	void initActions() {
+
+		tblBoudingBox.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (!e.getValueIsAdjusting()) {
+					ListSelectionModel lsm = (ListSelectionModel) e.getSource();
+					int msi = lsm.getMinSelectionIndex();
+					imagePanel.selectBoundingBox(msi);
+				}
+			}
+
+		});
+
+		btnRemoveBoundingBox.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				int index = tblBoudingBox.getSelectedRow();
+				imagePanel.removeBoundingBox(index);
+			}
+		});
+
+		btnCleanBoundingBox.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				imagePanel.removeAllBoundingBox();
+			}
+		});
+
+		btnFirst.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				currentImageIndex = 0;
-				imagePanel.load(imageFiles[currentImageIndex]);
+				imagePanel.load(imageFiles.get(currentImageIndex));
+				lblFileName.setText(imageFiles.get(currentImageIndex));
 			}
 		});
-		
-		btnNext.addActionListener(new ActionListener () {
+
+		btnNext.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (currentImageIndex < imageFiles.length - 1) {
-					imagePanel.load(imageFiles[++currentImageIndex]);
+				if (currentImageIndex < imageFiles.size() - 1) {
+					imagePanel.load(imageFiles.get(++currentImageIndex));
+					lblFileName.setText(imageFiles.get(currentImageIndex));
 				}
 			}
 		});
-		
-		this.btnPreviouse.addActionListener(new ActionListener () {
+
+		this.btnPreviouse.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (currentImageIndex > 0) {
-					imagePanel.load(imageFiles[--currentImageIndex]);
+					imagePanel.load(imageFiles.get(--currentImageIndex));
+					lblFileName.setText(imageFiles.get(currentImageIndex));
 				}
 			}
 		});
-		
-		this.btnLast.addActionListener(new ActionListener () {
+
+		this.btnLast.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				currentImageIndex = imageFiles.length - 1;
-				imagePanel.load(imageFiles[currentImageIndex]);
-				
+				currentImageIndex = imageFiles.size() - 1;
+				imagePanel.load(imageFiles.get(currentImageIndex));
+				lblFileName.setText(imageFiles.get(currentImageIndex));
 			}
 		});
+	}
+
+	void deleteCurrentFiles() {
+		String fileName = imageFiles.get(currentImageIndex);
+		imageFiles.remove(currentImageIndex);
+		try {
+			Files.deleteIfExists(Paths.get(fileName));
+			int i = fileName.lastIndexOf(".");
+			if (i != -1) {
+				String labelFile = fileName.substring(0, i) + ".label";
+				Files.deleteIfExists(Paths.get(labelFile));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		int maxIndex = imageFiles.size() - 1;
+		if (currentImageIndex > maxIndex) {
+			currentImageIndex = maxIndex;
+		}
+		imagePanel.load(imageFiles.get(currentImageIndex));
+		lblFileName.setText(imageFiles.get(currentImageIndex));
+		valTotalImage.setText("" + imageFiles.size());
 	}
 
 	/**
@@ -135,81 +209,86 @@ public class MainWindow {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new BorderLayout(10, 10));
 
-		JPanel northPanel = new JPanel();
-		frame.getContentPane().add(northPanel, BorderLayout.NORTH);
-		northPanel.setLayout(new BorderLayout(10, 5));
+		JToolBar toolBar = new JToolBar();
+		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
+		btnOpen = new JButton("Open DataSet");
+		btnOpen.setAction(new OpenFileAction());
+		toolBar.add(btnOpen);
 
-		JLabel lblNewLabel = new JLabel("Directory:");
-		northPanel.add(lblNewLabel, BorderLayout.WEST);
+		btnDelPicture = new JButton();
+		toolBar.add(btnDelPicture);
+		btnDelPicture.setAction(new AbstractAction() {
 
-		txtDirectory = new JTextField();
-		txtDirectory.setEditable(false);
-		northPanel.add(txtDirectory, BorderLayout.CENTER);
-		txtDirectory.setColumns(100);
+			@Override
+			public void actionPerformed(ActionEvent e) {
+
+				String imageFile = imageFiles.get(currentImageIndex);
+				String labelFile = "";
+				int i = imageFile.lastIndexOf(".");
+				if (i != -1) {
+					labelFile = imageFile.substring(0, i) + ".label";
+				}
+				String msg = String.format("are you sure to delete %s and its label file:%s if exsited", imageFile, labelFile);
+				int ret = showConfirmDialog(frame, msg, "confirm delete image", YES_NO_OPTION);
+				if (ret == YES_OPTION) {
+					deleteCurrentFiles();
+				}
+			}
+
+		});
+		btnDelPicture.setText("Delete Picutre");
+
+		btnConvert = new JButton("Convert");
+		toolBar.add(btnConvert);
+
+		btnAbout = new JButton("About");
+		toolBar.add(btnAbout);
 
 		JButton btnOpenFile = new JButton("Open");
 		btnOpenFile.setAction(new OpenFileAction(txtDirectory));
 		btnOpenFile.setText("Open DataSet");
 		btnOpenFile.setToolTipText("click the button open image dataset directory");
-		northPanel.add(btnOpenFile, BorderLayout.EAST);
 
-		centerPanel = new JPanel();
+		btnRemoveBoundingBox = new JButton("Remove");
+		btnCleanBoundingBox = new JButton("Clear All");
+
+		JPanel centerPanel = new JPanel();
 		frame.getContentPane().add(centerPanel, BorderLayout.CENTER);
-		centerPanel.setLayout(new BorderLayout(0, 0));
+		centerPanel.setLayout(new BorderLayout(5, 5));
+
+		String[] columnNames = { "Label", "Bounding Box" };
+		@SuppressWarnings("serial")
+		DefaultTableModel tableModel = new DefaultTableModel(null, columnNames) {
+
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
 
 		JPanel toolBoxPanel = new JPanel();
 		frame.getContentPane().add(toolBoxPanel, BorderLayout.EAST);
-		GridBagLayout gbl_toolBoxPanel = new GridBagLayout();
-		gbl_toolBoxPanel.columnWidths = new int[] { 44, 30, 60, 60, 0 };
-		gbl_toolBoxPanel.rowHeights = new int[] { 87, 0 };
-		gbl_toolBoxPanel.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0 };
-		gbl_toolBoxPanel.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
-		toolBoxPanel.setLayout(gbl_toolBoxPanel);
+		toolBoxPanel.setLayout(new BorderLayout(5, 5));
 
-		JList list = new JList();
-		list.setLayoutOrientation(JList.VERTICAL_WRAP);
-		list.setModel(new AbstractListModel() {
-			String[] values = new String[] { "1231", "456", "789", "1111", "12123" };
+		tblBoudingBox = new JTable(tableModel);
+		tblBoudingBox.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		tblBoudingBox.getColumnModel().getColumn(0).setPreferredWidth(5);
+		JScrollPane scrollPane = new JScrollPane(tblBoudingBox);
+		toolBoxPanel.add(scrollPane, BorderLayout.CENTER);
 
-			public int getSize() {
-				return values.length;
-			}
+		JPanel buttonPane = new JPanel();
+		buttonPane.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
+		buttonPane.add(btnRemoveBoundingBox);
+		buttonPane.add(btnCleanBoundingBox);
+		toolBoxPanel.add(buttonPane, BorderLayout.SOUTH);
 
-			public Object getElementAt(int index) {
-				return values[index];
-			}
-		});
-		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		list.setBorder(new LineBorder(new Color(0, 0, 0)));
-		GridBagConstraints gbc_list = new GridBagConstraints();
-		gbc_list.fill = GridBagConstraints.HORIZONTAL;
-		gbc_list.gridwidth = 2;
-		gbc_list.anchor = GridBagConstraints.NORTHWEST;
-		gbc_list.insets = new Insets(0, 0, 0, 5);
-		gbc_list.gridx = 0;
-		gbc_list.gridy = 0;
-		gbc_list.gridheight = 8;
+		centerPanel.add(imagePanel, BorderLayout.CENTER);
+		imagePanel.tableModel = tableModel;
 
-		toolBoxPanel.add(list, gbc_list);
-
-		JButton btnRemoveBoundingBox = new JButton("Remove");
-		GridBagConstraints gbc_btnRemoveBoundingBox = new GridBagConstraints();
-		gbc_btnRemoveBoundingBox.fill = GridBagConstraints.HORIZONTAL;
-		gbc_btnRemoveBoundingBox.insets = new Insets(0, 0, 0, 5);
-		gbc_btnRemoveBoundingBox.gridx = 0;
-		gbc_btnRemoveBoundingBox.gridy = 4;
-		toolBoxPanel.add(btnRemoveBoundingBox, gbc_btnRemoveBoundingBox);
-
-		JButton btnCleanBoundingBox = new JButton("Clear All");
-		GridBagConstraints gbc_btnCleanBoundingBox = new GridBagConstraints();
-		gbc_btnCleanBoundingBox.fill = GridBagConstraints.HORIZONTAL;
-		gbc_btnCleanBoundingBox.anchor = GridBagConstraints.WEST;
-		gbc_btnCleanBoundingBox.gridx = 0;
-		gbc_btnCleanBoundingBox.gridy = 5;
-		toolBoxPanel.add(btnCleanBoundingBox, gbc_btnCleanBoundingBox);
-
+		// status panel
 		JPanel panel = new JPanel();
-		frame.getContentPane().add(panel, BorderLayout.SOUTH);
+		panel.setLayout(new BoxLayout(panel, BoxLayout.LINE_AXIS));
+		centerPanel.add(panel, BorderLayout.SOUTH);
 
 		JPanel statusPanel = new JPanel();
 		FlowLayout flowLayout = (FlowLayout) statusPanel.getLayout();
@@ -223,10 +302,10 @@ public class MainWindow {
 		btnFirst = new JButton("|<");
 		navPanel.add(btnFirst);
 
-		btnPreviouse = new JButton("<");
+		btnPreviouse = new JButton("<<");
 		navPanel.add(btnPreviouse);
 
-		btnNext = new JButton(">");
+		btnNext = new JButton(">>");
 		navPanel.add(btnNext);
 
 		btnLast = new JButton(">|");
@@ -244,6 +323,9 @@ public class MainWindow {
 		valTotalLabel = new JLabel("NaN");
 		statusPanel.add(valTotalLabel);
 
+		lblFileName = new JLabel("");
+		statusPanel.add(lblFileName);
+
 		frame.pack();
 	}
 
@@ -253,10 +335,15 @@ public class MainWindow {
 
 		JTextField txtDirectory;
 
+		public OpenFileAction() {
+			putValue(NAME, "Open DateSet");
+			putValue(SHORT_DESCRIPTION, "open a directory which contain image dataset");
+		}
+
 		public OpenFileAction(JTextField txtDirectory) {
 			this.txtDirectory = txtDirectory;
-			putValue(NAME, "OpenFileAction");
-			putValue(SHORT_DESCRIPTION, "Some short description");
+			putValue(NAME, "Open DateSet");
+			putValue(SHORT_DESCRIPTION, "open a directory which contain image dataset");
 		}
 
 		public void actionPerformed(ActionEvent e) {
@@ -264,29 +351,11 @@ public class MainWindow {
 			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			int returnVal = chooser.showOpenDialog(frame);
 			if (returnVal == JFileChooser.APPROVE_OPTION) {
-				txtDirectory.setText(chooser.getSelectedFile().getAbsolutePath());
-
+				if (txtDirectory != null) {
+					txtDirectory.setText(chooser.getSelectedFile().getAbsolutePath());
+				}
 				loadImageThread = new LoadImageThread(chooser.getSelectedFile().toPath());
 				loadImageThread.start();
-			}
-		}
-	}
-
-	class UpdateStatusThread extends Thread {
-		LoadImageThread loadImageThread;
-
-		public UpdateStatusThread(LoadImageThread loadImageThread) {
-			super();
-			this.loadImageThread = loadImageThread;
-		}
-
-		public void run() {
-			try {
-				loadImageThread.join();
-				// totalFile = imageFiles.size();
-				// totalBoudingBoxLabels = labelFiles.size();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
 			}
 		}
 	}
@@ -304,16 +373,30 @@ public class MainWindow {
 				DataSetVisitor visitor = new DataSetVisitor(labelFiles);
 				Files.walkFileTree(path, visitor);
 				totalFile = visitor.imageFiles.size();
-				imageFiles = visitor.imageFiles.toArray(new String[totalFile ]);
+				imageFiles.addAll(visitor.imageFiles);
+//				imageFiles.addAll(Arrays.asList(visitor.imageFiles.toArray(new String[totalFile])));
 				valTotalImage.setText(String.valueOf(totalFile));
+				totalBoudingBoxLabels = visitor.labelFiles.size();
 				valTotalLabel.setText(String.valueOf(totalBoudingBoxLabels));
-				if (labelFiles.size() == 0) {
-					currentImageIndex = 0;
-					imagePanel.load(imageFiles[0]);
-				} else {
-					// TODO skip the first un-label image
 
+				// locate the first un-labeled image
+				currentImageIndex = 0;
+				if (labelFiles.size() > 0) {
+					Iterator<String> iter = visitor.labelFiles.iterator();
+					while (iter.hasNext() && currentImageIndex < totalFile) {
+						String labelFile = iter.next();
+						String imageFile = imageFiles.get(currentImageIndex);
+						int i = imageFile.lastIndexOf(".");
+						if (i != -1) {
+							if (!labelFile.substring(0, i).equals(imageFile.substring(0, i))) {
+								break;
+							}
+						}
+						currentImageIndex++;
+					}
 				}
+				imagePanel.load(imageFiles.get(currentImageIndex));
+				lblFileName.setText(imageFiles.get(currentImageIndex));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

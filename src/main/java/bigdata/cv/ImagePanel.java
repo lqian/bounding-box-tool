@@ -3,6 +3,7 @@
  */
 package bigdata.cv;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -10,6 +11,10 @@ import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -25,21 +30,28 @@ import javax.imageio.ImageIO;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.table.DefaultTableModel;
 
 /**
  * @author lqian
  *
  */
-public class ImagePanel extends JPanel implements MouseListener, MouseMotionListener {
+public class ImagePanel extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener {
+
 	private static final long serialVersionUID = -7794767941999850410L;
 
+	final float ZOOM_LEVEL = 1.2f;
+
+	static final float MAX_SCALE_FACTOR = 4;
+
+	static final float MIN_SCALE_FACTOR = 0.25f;
+
 	final static Object[] lebels = { "驾驶员", "车牌", "年检标", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标" };
+
+	DefaultTableModel tableModel;
+
 	String imageFile;
 	String labelFile;
-
-	int imageWidth;
-
-	int imageHeight;
 
 	/**
 	 * copred bounding boxes
@@ -49,24 +61,58 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 	// x1, y1, x2, y2 of corp bounding box
 	int corpX1, corpY1, corpX2, corpY2;
 
-	int moveX, moveY;
+	// x, y of corping bounding box
+	int corpX, corpY;
 
 	boolean hasChanged = false;
 
 	CorpStatus corpStatus = CorpStatus.unkonw;
 
 	BufferedImage image;
+	int imageWidth, imageHeight;
+
+	BufferedImage scaleImage;
+	double scaleFactor;
+	int showX, showY;
+
+	int lastDragX, lastDragY;
+	int moveX, moveY;
+	boolean hasDragged = false;
+	int selectBoundingBoxIndex = -1;
 
 	public ImagePanel() {
 		super();
 		addMouseListener(this);
 		addMouseMotionListener(this);
+		addMouseWheelListener(this);
+	}
+
+	public void renderTableModel() {
+		for (LabeledBoundingBox bb : boundingBoxes) {
+			tableModel.addRow(new Object[] { bb.labelName, bb.boundingBoxString() });
+		}
+	}
+
+	public void selectBoundingBox(int index) {
+		selectBoundingBoxIndex = index;
+		repaint();
 	}
 
 	public void load(String imageFile) {
 		if (hasChanged) {
 			saveLabelsToFile();
 			hasChanged = false;
+		}
+
+		lastDragX = lastDragY = 0;
+		showX = showY = moveX = moveY = 0;
+		boundingBoxes.clear();
+		selectBoundingBoxIndex = -1;
+		hasDragged = false;
+		scaleImage = null;
+		
+		while (tableModel.getRowCount() > 0) {
+			tableModel.removeRow(0);
 		}
 
 		corpStatus = CorpStatus.unkonw;
@@ -81,7 +127,6 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 				image = ImageIO.read(new File(imageFile));
 				imageWidth = image.getWidth();
 				imageHeight = image.getHeight();
-				loadExistedBoundingBox();
 			} catch (IOException e) {
 				image = null;
 				imageWidth = -1;
@@ -89,7 +134,6 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 				showWarningMsg("cannot read image content for file:\n" + imageFile);
 			}
 
-			boundingBoxes.clear();
 			loadExistedBoundingBox();
 
 			repaint();
@@ -114,6 +158,8 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 					boundingBoxes.add(LabeledBoundingBox.from(line));
 				}
 				reader.close();
+
+				renderTableModel();
 			} catch (IOException e) {
 				e.printStackTrace();
 				showWarningMsg("cannot read label file:\n" + labelFile);
@@ -147,35 +193,102 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 	}
 
 	public void removeBoundingBox(int i) {
+		selectBoundingBoxIndex = -1;
 		boundingBoxes.remove(i);
+		tableModel.removeRow(i);
+		hasChanged = true;
 		repaint();
 	}
 
-	@Override
-	public void update(Graphics g) {
-		super.update(g);
+	public void removeAllBoundingBox() {
+		selectBoundingBoxIndex = -1;
+		while (tableModel.getRowCount() > 0) {
+			tableModel.removeRow(0);
+		}
+		boundingBoxes.clear();
+		hasChanged = true;
+		repaint();
 	}
 
 	public void paint(Graphics g) {
-		if (imageFile != null) {
-			Graphics2D g2d = (Graphics2D) g;
-			g2d.drawImage(image, 0, 0, this);
-			g2d.setColor(Color.WHITE);
+		int pw = this.getWidth();
+		int ph = this.getHeight();
+		g.setColor(this.getBackground());
+		g.fillRect(0, 0, pw, ph);
 
-			for (LabeledBoundingBox bb : boundingBoxes) {
-				g2d.drawRect(bb.x, bb.y, bb.w, bb.h);
+		if (scaleImage != null) {
+			int sw = scaleImage.getWidth();
+			int sh = scaleImage.getHeight();
+			if (sw <= pw) {
+				showX = (pw - sw) / 2;
+			}
+			if (sh <= ph) {
+				showY = (ph - sh) / 2;
 			}
 
-			if (corpStatus == CorpStatus.moving) {
-				int x = corpX1 < moveX ? corpX1 : moveX;
-				int y = corpY1 < moveY ? corpY1 : moveY;
-				int w = Math.abs(corpX1 - moveX);
-				int h = Math.abs(corpY1 - moveY);
-				g2d.drawRect(x, y, w, h);
+			if (hasDragged) {
+				showX += moveX;
+				showY += moveY;
+			} else {
+				showX = (pw - sw) / 2;
+				showY = (ph - sh) / 2;
 			}
+
+			g.drawImage(scaleImage, showX, showY, this);
+		} else if (imageFile != null) {
+			int iw = image.getWidth();
+			int ih = image.getHeight();
+			int x = 0, y = 0;
+			double sw = iw * 1.0 / pw;
+			double sh = ih * 1.0 / ph;
+
+			{
+				scaleFactor = sh > sw ? sh : sw;
+				int w = (int) (iw / scaleFactor);
+				int h = (int) (ih / scaleFactor);
+				x = (pw - w) / 2;
+				y = (ph - h) / 2;
+				g.drawImage(image, x, y, w, h, this);
+				showX = x;
+				showY = y;
+			}
+
 		} else {
 			super.paintComponents(g);
 		}
+
+		// if (image != null) {
+		// existed bounding box
+
+		Graphics2D g2d = (Graphics2D) g;
+		for (int i = 0; i < boundingBoxes.size(); i++) {
+			LabeledBoundingBox bb = boundingBoxes.get(i);
+			int bx = (int) (bb.x / scaleFactor);
+			int by = (int) (bb.y / scaleFactor);
+			int bw = (int) (bb.w / scaleFactor);
+			int bh = (int) (bb.h / scaleFactor);
+			if (i == selectBoundingBoxIndex) {
+				g2d.setColor(Color.MAGENTA);
+				g2d.setStroke(new BasicStroke(5f));
+				g2d.drawRect(showX + bx, showY + by, bw, bh);
+			} else {
+				g2d.setStroke(new BasicStroke(1f));
+				g2d.setColor(Color.WHITE);
+				g2d.drawRect(showX + bx, showY + by, bw, bh);
+			}
+		}
+
+		// current un-corp bounding box if exists
+		if (corpStatus == CorpStatus.moving) {
+			int x = corpX1 < corpX ? corpX1 : corpX;
+			int y = corpY1 < corpY ? corpY1 : corpY;
+			int w = Math.abs(corpX1 - corpX);
+			int h = Math.abs(corpY1 - corpY);
+			g2d.setStroke(new BasicStroke(1f));
+			g2d.setColor(Color.WHITE);
+			g2d.drawRect(x, y, w, h);
+		}
+		// }
 	}
 
 	@Override
@@ -194,10 +307,12 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 					corpX2 = e.getX();
 					corpY2 = e.getY();
 					hasChanged = true;
-					LabeledBoundingBox bb = LabeledBoundingBox.wrap(label, corpX1, corpY1, corpX2, corpY2);
+					LabeledBoundingBox bb = LabeledBoundingBox.wrap(label, corpX1, corpY1, corpX2, corpY2, scaleFactor,
+							showX, showY);
 					boundingBoxes.add(bb);
-					repaint();
+					tableModel.addRow(new Object[]{label, bb.boundingBoxString()});
 					corpStatus = CorpStatus.unkonw;
+					repaint();
 				}
 			}
 		} else if (e.getButton() != MouseEvent.BUTTON1) {
@@ -209,12 +324,13 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 
 	@Override
 	public void mousePressed(MouseEvent e) {
-
+		lastDragX = e.getX();
+		lastDragY = e.getY();
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
-
+		moveX = moveY = 0;
 	}
 
 	@Override
@@ -229,6 +345,18 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
+		if (scaleImage == null)
+			return;
+		if (lastDragX != 0 && lastDragY != 0) {
+			moveX = e.getX() - lastDragX;
+			moveY = e.getY() - lastDragY;
+			hasDragged = true;
+		}
+
+		lastDragX = e.getX();
+		lastDragY = e.getY();
+
+		repaint();
 
 	}
 
@@ -237,14 +365,51 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 		if (corpStatus.equals(CorpStatus.startCorp)) {
 			corpStatus = CorpStatus.moving;
 		} else if (corpStatus.equals(CorpStatus.moving)) {
-			moveX = e.getX();
-			moveY = e.getY();
+			corpX = e.getX();
+			corpY = e.getY();
 			repaint();
 		}
 	}
 
 	static enum CorpStatus {
 		unkonw, startCorp, moving, endCorp
+	}
+
+	/**
+	 * clip central party of scaled image
+	 * 
+	 * @param rotation
+	 */
+	void zoom(int rotation) {
+
+		double factor = Math.pow(ZOOM_LEVEL, -1 * rotation);
+		scaleFactor /= factor;
+		if (scaleFactor > MAX_SCALE_FACTOR) {
+			scaleFactor = MAX_SCALE_FACTOR;
+		}
+
+		if (scaleFactor < MIN_SCALE_FACTOR) {
+			scaleFactor = MIN_SCALE_FACTOR;
+		}
+
+		int w = (int) (imageWidth / scaleFactor);
+		int h = (int) (imageHeight / scaleFactor);
+
+		scaleImage = new BufferedImage(w, h, image.getType());
+		AffineTransform transform = new AffineTransform();
+		transform.setToScale(1 / scaleFactor, 1 / scaleFactor);
+		AffineTransformOp imageOp = new AffineTransformOp(transform, null);
+		imageOp.filter(image, scaleImage);
+
+		repaint();
+	}
+
+	void zoomOut() {
+	}
+
+	@Override
+	public void mouseWheelMoved(MouseWheelEvent e) {
+		zoom(e.getWheelRotation());
 	}
 
 }
