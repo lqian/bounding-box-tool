@@ -8,6 +8,8 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -36,7 +38,7 @@ import javax.swing.table.DefaultTableModel;
  * @author lqian
  *
  */
-public class ImagePanel extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener {
+public class ImagePanel extends JPanel implements KeyListener, MouseListener, MouseMotionListener, MouseWheelListener {
 
 	private static final long serialVersionUID = -7794767941999850410L;
 
@@ -46,7 +48,7 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 
 	static final float MIN_SCALE_FACTOR = 0.25f;
 
-	final static Object[] lebels = { "驾驶员", "车牌", "年检标", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标" };
+	final static Object[] lebels = { "车辆", "驾驶员", "车牌", "年检标", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标" };
 
 	DefaultTableModel tableModel;
 
@@ -85,6 +87,7 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
+		addKeyListener(this);
 	}
 
 	public void renderTableModel() {
@@ -110,7 +113,7 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 		selectBoundingBoxIndex = -1;
 		hasDragged = false;
 		scaleImage = null;
-		
+
 		while (tableModel.getRowCount() > 0) {
 			tableModel.removeRow(0);
 		}
@@ -127,16 +130,14 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 				image = ImageIO.read(new File(imageFile));
 				imageWidth = image.getWidth();
 				imageHeight = image.getHeight();
+				loadExistedBoundingBox();
+				repaint();
 			} catch (IOException e) {
 				image = null;
 				imageWidth = -1;
 				imageHeight = -1;
 				showWarningMsg("cannot read image content for file:\n" + imageFile);
 			}
-
-			loadExistedBoundingBox();
-
-			repaint();
 		}
 	}
 
@@ -155,7 +156,9 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 				BufferedReader reader = Files.newBufferedReader(path);
 				String line = null;
 				while ((line = reader.readLine()) != null) {
-					boundingBoxes.add(LabeledBoundingBox.from(line));
+					LabeledBoundingBox bb = LabeledBoundingBox.from(line);
+					if (bb != null)
+						boundingBoxes.add(bb);
 				}
 				reader.close();
 
@@ -179,6 +182,8 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 		if (i != -1) {
 			try {
 				BufferedWriter writer = Files.newBufferedWriter(Paths.get(labelFile), Charset.defaultCharset());
+				writer.write(this.imageWidth + "," + this.imageHeight);
+				writer.newLine();
 				for (LabeledBoundingBox bb : boundingBoxes) {
 					writer.write(bb.toString());
 					writer.newLine();
@@ -310,7 +315,7 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 					LabeledBoundingBox bb = LabeledBoundingBox.wrap(label, corpX1, corpY1, corpX2, corpY2, scaleFactor,
 							showX, showY);
 					boundingBoxes.add(bb);
-					tableModel.addRow(new Object[]{label, bb.boundingBoxString()});
+					tableModel.addRow(new Object[] { label, bb.boundingBoxString() });
 					corpStatus = CorpStatus.unkonw;
 					repaint();
 				}
@@ -411,5 +416,79 @@ public class ImagePanel extends JPanel implements MouseListener, MouseMotionList
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		zoom(e.getWheelRotation());
 	}
+
+	@Override
+	public void keyTyped(KeyEvent e) {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		int key = e.getKeyCode();
+
+		switch (key) {
+		case 'H':
+			moveLeft();
+			break;
+		case 'J':
+			moveDown();
+			break;
+		case 'L':
+			moveRight();
+			break;
+		case 'K':
+			moveUp();
+			break;
+		case 'Y':
+			expandLeft();
+			break;
+		case 'U':
+			expandRight();
+			break;
+		case 'I':
+			expandTop();
+			break;
+		case 'O':
+			expandBottom();
+			break;
+		case 'E':
+			expand();
+			break;
+		case 'y':
+			shrinkLeft();
+			break;
+		case 'u':
+			shrinkRight();
+			break;
+		case 'i':
+			shrinkTop();
+			break;
+		case 'o':
+			shrinkBottom();
+			break;
+		case 'e':
+			shrink();
+			break;
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+	}
+	
+	void moveLeft() {}
+	void moveDown() {}
+	void moveRight(){}
+	void moveUp(){}
+	void shrinkLeft() {}
+	void shrinkRight(){}
+	void shrinkTop(){}
+	void shrinkBottom(){}
+	void shrink(){}
+	void expand() {}
+	void expandLeft() {}
+	void expandRight(){}
+	void expandTop(){}
+	void expandBottom(){}
 
 }
