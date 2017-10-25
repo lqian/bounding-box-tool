@@ -48,7 +48,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	static final float MIN_SCALE_FACTOR = 0.25f;
 
-	final static Object[] lebels = { "车辆", "驾驶员", "车牌", "年检标", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标" };
+	final static Object[] lebels = { "车辆", "驾驶员", "车牌", "年检标", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标", "实习标" };
 
 	DefaultTableModel tableModel;
 
@@ -81,6 +81,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	int moveX, moveY;
 	boolean hasDragged = false;
 	int selectBoundingBoxIndex = -1;
+	
+	LabelFileListener  labelFileListener;
 
 	public ImagePanel() {
 		super();
@@ -190,6 +192,10 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				}
 				writer.flush();
 				writer.close();
+				
+				if (labelFileListener != null) {
+					labelFileListener.postLabelFileSave();
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 				showWarningMsg("cannot write label file:\n" + labelFile);

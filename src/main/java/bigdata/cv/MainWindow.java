@@ -104,6 +104,16 @@ public class MainWindow {
 
 	void initActions() {
 
+		imagePanel.labelFileListener = new LabelFileListener() {
+
+			@Override
+			public void postLabelFileSave() {
+				int labels = Integer.valueOf(valTotalLabel.getText());
+				labels++;
+				valTotalLabel.setText(String.valueOf(labels));
+			}
+		};
+		
 		tblBoudingBox.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
 			@Override
