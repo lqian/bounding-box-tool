@@ -48,10 +48,11 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	static final float MIN_SCALE_FACTOR = 0.25f;
 
-	final static Object[] lebels = { "车辆", "驾驶员", "车牌", "年检标", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标", "实习标" };
+	final static Object[] lebels = { "车辆", "驾驶员", "年检标", "车牌", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标", "实习标" };
 
 	DefaultTableModel tableModel;
 
+	Path datasetPath;
 	String imageFile;
 	String labelFile;
 
@@ -129,7 +130,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		} else {
 			labelFile = imageFile.substring(0, i) + ".label";
 			try {
-				image = ImageIO.read(new File(imageFile));
+				image = ImageIO.read(new File(datasetPath.toFile(), imageFile));
 				imageWidth = image.getWidth();
 				imageHeight = image.getHeight();
 				loadExistedBoundingBox();
@@ -152,7 +153,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public void loadExistedBoundingBox() {
-		Path path = Paths.get(labelFile);
+		Path path = datasetPath.resolve(labelFile);
 		if (Files.exists(path)) {
 			try {
 				BufferedReader reader = Files.newBufferedReader(path);
@@ -183,7 +184,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		int i = imageFile.lastIndexOf(".");
 		if (i != -1) {
 			try {
-				BufferedWriter writer = Files.newBufferedWriter(Paths.get(labelFile), Charset.defaultCharset());
+				BufferedWriter writer = Files.newBufferedWriter(datasetPath.resolve(labelFile), Charset.defaultCharset());
 				writer.write(this.imageWidth + "," + this.imageHeight);
 				writer.newLine();
 				for (LabeledBoundingBox bb : boundingBoxes) {

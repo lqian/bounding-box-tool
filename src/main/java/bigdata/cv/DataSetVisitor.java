@@ -20,13 +20,13 @@ public class DataSetVisitor implements FileVisitor<Path> {
 
 	static Set<String> extensions = new TreeSet<String>();
 	
-	PriorityQueue<String> imageFiles = new PriorityQueue<String>();
+	PriorityQueue<String> imageFiles = new PriorityQueue<String>(new StringComparator());
 	
-	PriorityQueue<String> labelFiles ;
+	PriorityQueue<String> labelFiles;
 
 	static {
 		extensions.add("jpg");
-		extensions.add("png");
+//		extensions.add("png");
 	}
 	
 	public DataSetVisitor(PriorityQueue<String> labelFiles) {
@@ -40,18 +40,18 @@ public class DataSetVisitor implements FileVisitor<Path> {
 	}
 
 	@Override
-	public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+	public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
 		if (attrs.isRegularFile()) {
-			String name = file.getFileName().toString();
+			String name = path.getFileName().toString();
 			int li = name.lastIndexOf(".");
 			if (li > 0) {
 				String extName = name.substring(li + 1).toLowerCase();
 				if (extensions.contains(extName)) {
-					imageFiles.add(file.toString());
+					imageFiles.add(name);
 				}
 				
 				if ("label".equals(extName)) {
-					labelFiles.add(file.toString());
+					labelFiles.add(name);
 				}
 			}
 		}

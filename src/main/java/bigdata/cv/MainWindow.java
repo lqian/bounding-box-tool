@@ -1,5 +1,9 @@
 package bigdata.cv;
 
+import static javax.swing.JOptionPane.YES_NO_OPTION;
+import static javax.swing.JOptionPane.YES_OPTION;
+import static javax.swing.JOptionPane.showConfirmDialog;
+
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -10,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -22,7 +25,6 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -33,8 +35,8 @@ import javax.swing.UIManager;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
-import static javax.swing.JOptionPane.*;
 
+@SuppressWarnings("serial")
 public class MainWindow {
 
 	private JFrame frame;
@@ -45,7 +47,7 @@ public class MainWindow {
 
 	List<String> imageFiles = new ArrayList<String>();
 
-	PriorityQueue<String> labelFiles = new PriorityQueue<String>();
+	PriorityQueue<String> labelFiles = new PriorityQueue<String>(new StringComparator());
 
 	LoadImageThread loadImageThread;
 
@@ -70,6 +72,8 @@ public class MainWindow {
 	private JButton btnDelPicture;
 	private JButton btnAbout;
 	private JButton btnConvert;
+	
+	Path datasetPath;
 
 	/**
 	 * Launch the application.
@@ -98,7 +102,6 @@ public class MainWindow {
 		}
 
 		initialize();
-
 		initActions();
 	}
 
@@ -185,6 +188,38 @@ public class MainWindow {
 				lblFileName.setText(imageFiles.get(currentImageIndex));
 			}
 		});
+		
+		btnDelPicture.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+
+				String imageFile = imageFiles.get(currentImageIndex);
+				String labelFile = "";
+				int i = imageFile.lastIndexOf(".");
+				if (i != -1) {
+					labelFile = imageFile.substring(0, i) + ".label";
+				}
+				String msg = String.format("are you sure to delete %s and its label file:%s if exsited", imageFile, labelFile);
+				int ret = showConfirmDialog(frame, msg, "confirm delete image", YES_NO_OPTION);
+				if (ret == YES_OPTION) {
+					deleteCurrentFiles();
+				}
+			}
+
+		});
+		
+		this.btnConvert.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				ConvertDialog dialog = new ConvertDialog(frame, true, datasetPath);
+				dialog.setVisible(true);
+				dialog.setAlwaysOnTop(true);
+				dialog.setLocationRelativeTo(frame);
+			}
+			
+		});
 	}
 
 	void deleteCurrentFiles() {
@@ -213,6 +248,7 @@ public class MainWindow {
 	/**
 	 * Initialize the contents of the frame.
 	 */
+	
 	private void initialize() {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 450, 300);
@@ -227,26 +263,8 @@ public class MainWindow {
 
 		btnDelPicture = new JButton();
 		toolBar.add(btnDelPicture);
-		btnDelPicture.setAction(new AbstractAction() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				String imageFile = imageFiles.get(currentImageIndex);
-				String labelFile = "";
-				int i = imageFile.lastIndexOf(".");
-				if (i != -1) {
-					labelFile = imageFile.substring(0, i) + ".label";
-				}
-				String msg = String.format("are you sure to delete %s and its label file:%s if exsited", imageFile, labelFile);
-				int ret = showConfirmDialog(frame, msg, "confirm delete image", YES_NO_OPTION);
-				if (ret == YES_OPTION) {
-					deleteCurrentFiles();
-				}
-			}
-
-		});
 		btnDelPicture.setText("Delete Picutre");
+		btnDelPicture.setEnabled(false);
 
 		btnConvert = new JButton("Convert");
 		toolBar.add(btnConvert);
@@ -267,7 +285,6 @@ public class MainWindow {
 		centerPanel.setLayout(new BorderLayout(5, 5));
 
 		String[] columnNames = { "Label", "Bounding Box" };
-		@SuppressWarnings("serial")
 		DefaultTableModel tableModel = new DefaultTableModel(null, columnNames) {
 
 			@Override
@@ -384,7 +401,6 @@ public class MainWindow {
 				Files.walkFileTree(path, visitor);
 				totalFile = visitor.imageFiles.size();
 				imageFiles.addAll(visitor.imageFiles);
-//				imageFiles.addAll(Arrays.asList(visitor.imageFiles.toArray(new String[totalFile])));
 				valTotalImage.setText(String.valueOf(totalFile));
 				totalBoudingBoxLabels = visitor.labelFiles.size();
 				valTotalLabel.setText(String.valueOf(totalBoudingBoxLabels));
@@ -392,21 +408,20 @@ public class MainWindow {
 				// locate the first un-labeled image
 				currentImageIndex = 0;
 				if (labelFiles.size() > 0) {
-					Iterator<String> iter = visitor.labelFiles.iterator();
-					while (iter.hasNext() && currentImageIndex < totalFile) {
-						String labelFile = iter.next();
+					for (; currentImageIndex < imageFiles.size(); currentImageIndex++) {
 						String imageFile = imageFiles.get(currentImageIndex);
 						int i = imageFile.lastIndexOf(".");
-						if (i != -1) {
-							if (!labelFile.substring(0, i).equals(imageFile.substring(0, i))) {
-								break;
-							}
+						String labelFile = imageFile.substring(0, i) + ".label";
+						if (Files.notExists(path.resolve(labelFile))) {
+							break;
 						}
-						currentImageIndex++;
 					}
 				}
+				datasetPath = path;
+				imagePanel.datasetPath = path;
 				imagePanel.load(imageFiles.get(currentImageIndex));
 				lblFileName.setText(imageFiles.get(currentImageIndex));
+				btnDelPicture.setEnabled(true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
