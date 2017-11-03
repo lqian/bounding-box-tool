@@ -128,13 +128,12 @@ public class ConvertDialog extends JDialog {
 						reader.close();
 					}
 					writer.flush();
-					lblStatus.setText(counter+"");
+					lblStatus.setText("convert labeles: " + counter);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
 			}
 		});
-		
 	}
 	
 	void initialize() {
@@ -194,7 +193,7 @@ public class ConvertDialog extends JDialog {
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize(); //得到屏幕的尺寸 
 	    int screenWidth = screenSize.width;
 	    int screenHeight = screenSize.height;
-	    setLocation((screenWidth - this.getWidth()) / 2, (screenHeight - this.getHeight())/2);
+	    setLocation((screenWidth - this.getWidth()) / 2, (screenHeight - this.getHeight())/4);
 	       
 	}
 }

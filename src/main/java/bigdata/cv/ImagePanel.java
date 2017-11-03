@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
@@ -416,9 +415,6 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		repaint();
 	}
 
-	void zoomOut() {
-	}
-
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		zoom(e.getWheelRotation());
@@ -426,7 +422,6 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	@Override
 	public void keyTyped(KeyEvent e) {
-		// TODO Auto-generated method stub
 	}
 
 	@Override
