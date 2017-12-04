@@ -18,10 +18,10 @@ public class LabeledBoundingBox {
 			int showX, int showY) {
 		LabeledBoundingBox bb = new LabeledBoundingBox();
 		bb.labelName = labelName;
-		bb.x = (int) round(((x1 < x2 ? x1 : x2) - showX) * scaleFactor) ;
-		bb.y = (int) round(((y1 < y2 ? y1 : y2)  - showY) * scaleFactor);
-		bb.w = (int) (abs(x1 - x2) * scaleFactor);
-		bb.h = (int) (abs(y1 - y2) * scaleFactor);
+		bb.x = (int) floor(((x1 < x2 ? x1 : x2) - showX + 1) * scaleFactor);
+		bb.y = (int) floor(((y1 < y2 ? y1 : y2)  - showY + 1) * scaleFactor);
+		bb.w = (int) floor(abs(x1 - x2) * scaleFactor) + 1;
+		bb.h = (int) floor(abs(y1 - y2) * scaleFactor) + 1;
 		return bb;
 	}
 

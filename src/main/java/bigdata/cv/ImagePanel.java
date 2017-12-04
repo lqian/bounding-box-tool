@@ -47,8 +47,9 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	static final float MIN_SCALE_FACTOR = 0.25f;
 
-	final static Object[] lebels = { "车辆", "驾驶员", "年检标", "车牌", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标", "实习标" };
-
+	public final static String[] clazzNames = { "车辆", "驾驶员", "年检标", "遮阳板", "车牌", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标", "实习标", "临牌" };
+	public final static String[] clazzNames_Eng = { "vehicle", "driver", "pvds", "zyb", "vehicle_plate", "tissue_box", "gs", "bj", "safety_belt", "phone", "mark_plate", "carriage_of_dangerous_goods",
+			"yellow_label", "Standard_Practice", "temporary_plate" };
 	DefaultTableModel tableModel;
 
 	Path datasetPath;
@@ -82,7 +83,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	boolean hasDragged = false;
 	int selectBoundingBoxIndex = -1;
 	
-	LabelFileListener  labelFileListener;
+	ImagePanelListener  listener;
 
 	public ImagePanel() {
 		super();
@@ -132,6 +133,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				image = ImageIO.read(new File(datasetPath.toFile(), imageFile));
 				imageWidth = image.getWidth();
 				imageHeight = image.getHeight();
+				listener.postOpen();
 				loadExistedBoundingBox();
 				repaint();
 			} catch (IOException e) {
@@ -174,7 +176,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	public String showLabelDialog() {
 		String label = (String) JOptionPane.showInputDialog(this, "select one label:", "", JOptionPane.PLAIN_MESSAGE,
-				null, lebels, null);
+				null, clazzNames, null);
 
 		return label;
 	}
@@ -182,8 +184,12 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	public void saveLabelsToFile() {
 		int i = imageFile.lastIndexOf(".");
 		if (i != -1) {
+			
 			try {
-				BufferedWriter writer = Files.newBufferedWriter(datasetPath.resolve(labelFile), Charset.defaultCharset());
+				
+				Path path = datasetPath.resolve(labelFile);
+				boolean update = Files.exists(path);
+				BufferedWriter writer = Files.newBufferedWriter(path, Charset.defaultCharset());
 				writer.write(this.imageWidth + "," + this.imageHeight);
 				writer.newLine();
 				for (LabeledBoundingBox bb : boundingBoxes) {
@@ -193,9 +199,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				writer.flush();
 				writer.close();
 				
-				if (labelFileListener != null) {
-					labelFileListener.postLabelFileSave();
-				}
+				listener.postLabelFileSave(update);
 			} catch (IOException e) {
 				e.printStackTrace();
 				showWarningMsg("cannot write label file:\n" + labelFile);
@@ -246,24 +250,30 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 			}
 
 			g.drawImage(scaleImage, showX, showY, this);
-		} else if (imageFile != null) {
+		} else if (image != null) {
 			int iw = image.getWidth();
 			int ih = image.getHeight();
 			int x = 0, y = 0;
 			double sw = iw * 1.0 / pw;
 			double sh = ih * 1.0 / ph;
-
+			scaleFactor = sh > sw ? sh : sw;
+			if (scaleFactor <1) {
+				scaleFactor = 1;
+			}
+			
 			{
-				scaleFactor = sh > sw ? sh : sw;
-				int w = (int) (iw / scaleFactor);
-				int h = (int) (ih / scaleFactor);
-				x = (pw - w) / 2;
-				y = (ph - h) / 2;
+				int w = (int) (iw / scaleFactor) ;
+				int h = (int) (ih / scaleFactor) ;
+				x = (pw - w) / 2 - 1;
+				y = (ph - h) / 2 - 1;
 				g.drawImage(image, x, y, w, h, this);
 				showX = x;
 				showY = y;
+				
+				if (listener != null) {
+					listener.postScaled();
+				}
 			}
-
 		} else {
 			super.paintComponents(g);
 		}
@@ -282,6 +292,12 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				g2d.setColor(Color.MAGENTA);
 				g2d.setStroke(new BasicStroke(5f));
 				g2d.drawRect(showX + bx, showY + by, bw, bh);
+				
+				if (image != null) {
+					BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
+					this.listener.postSelectedImage(sub);
+				}
+				
 			} else {
 				g2d.setStroke(new BasicStroke(1f));
 				g2d.setColor(Color.WHITE);
@@ -304,7 +320,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
-
+		requestFocusInWindow();
 		if (e.getButton() == MouseEvent.BUTTON1) {
 			// left click
 			if (corpStatus.equals(CorpStatus.unkonw)) {
@@ -323,6 +339,10 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 					boundingBoxes.add(bb);
 					tableModel.addRow(new Object[] { label, bb.boundingBoxString() });
 					corpStatus = CorpStatus.unkonw;
+					
+					BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
+					listener.postCorp(sub);
+					this.selectBoundingBoxIndex = -1;
 					repaint();
 				}
 			}
@@ -366,9 +386,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 		lastDragX = e.getX();
 		lastDragY = e.getY();
-
 		repaint();
-
 	}
 
 	@Override
@@ -392,7 +410,6 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	 * @param rotation
 	 */
 	void zoom(int rotation) {
-
 		double factor = Math.pow(ZOOM_LEVEL, -1 * rotation);
 		scaleFactor /= factor;
 		if (scaleFactor > MAX_SCALE_FACTOR) {
@@ -413,6 +430,10 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		imageOp.filter(image, scaleImage);
 
 		repaint();
+		
+		if (listener != null) {
+			listener.postScaled();
+		}
 	}
 
 	@Override
@@ -422,75 +443,133 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	@Override
 	public void keyTyped(KeyEvent e) {
+//		System.out.println(e.toString());
 	}
 
 	@Override
 	public void keyPressed(KeyEvent e) {
 		int key = e.getKeyCode();
 
+		// last or selected bounding box
+		LabeledBoundingBox bb = null ;
+		if (selectBoundingBoxIndex == -1) {
+			int size = boundingBoxes.size();
+			if (size > 0) {
+				bb = boundingBoxes.get(size - 1);
+			}
+		}
+		else {
+			bb = boundingBoxes.get(selectBoundingBoxIndex);
+		}
+		if (bb == null ) return;
+
 		switch (key) {
-		case 'H':
-			moveLeft();
+		case 'A':
+			moveLeft(bb);
 			break;
-		case 'J':
-			moveDown();
+		case 'S':
+			moveDown(bb);
 			break;
-		case 'L':
-			moveRight();
+		case 'D':
+			moveRight(bb);
 			break;
-		case 'K':
-			moveUp();
+		case 'W':
+			moveUp(bb);
 			break;
 		case 'Y':
-			expandLeft();
+			expandLeft(bb);
 			break;
 		case 'U':
-			expandRight();
+			expandRight(bb);
 			break;
 		case 'I':
-			expandTop();
+			expandTop(bb);
 			break;
 		case 'O':
-			expandBottom();
+			expandBottom(bb);
 			break;
 		case 'E':
-			expand();
+			expand(bb);
+			break;				
+		case 'H':
+			shrinkLeft(bb);
 			break;
-		case 'y':
-			shrinkLeft();
+		case 'J':
+			shrinkRight(bb);
 			break;
-		case 'u':
-			shrinkRight();
+		case 'K':
+			shrinkTop(bb);
 			break;
-		case 'i':
-			shrinkTop();
+		case 'L':
+			shrinkBottom(bb);
 			break;
-		case 'o':
-			shrinkBottom();
-			break;
-		case 'e':
-			shrink();
+		case 'R':
+			shrink(bb);
 			break;
 		}
+		repaint();
+		BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
+		listener.postChange(sub);
+		listener.postChangeLabel(selectBoundingBoxIndex, bb);
+		hasChanged = true;
 	}
 
 	@Override
 	public void keyReleased(KeyEvent e) {
 	}
-	
-	void moveLeft() {}
-	void moveDown() {}
-	void moveRight(){}
-	void moveUp(){}
-	void shrinkLeft() {}
-	void shrinkRight(){}
-	void shrinkTop(){}
-	void shrinkBottom(){}
-	void shrink(){}
-	void expand() {}
-	void expandLeft() {}
-	void expandRight(){}
-	void expandTop(){}
-	void expandBottom(){}
 
+	void moveLeft(LabeledBoundingBox bb) {
+		bb.x -= 1;
+	}
+	void moveDown(LabeledBoundingBox bb) {
+		bb.y += 1;
+	}
+	void moveRight(LabeledBoundingBox bb){
+		bb.x += 1;
+	}
+
+	void moveUp(LabeledBoundingBox bb){
+		bb.y -= 1;
+	}
+	void shrinkLeft(LabeledBoundingBox bb) {
+		bb.x += 1;
+		bb.w -= 1;
+	}
+	void shrinkRight(LabeledBoundingBox bb){
+		bb.w -= 1;
+	}
+	void shrinkTop(LabeledBoundingBox bb){
+		bb.y += 1;
+		bb.h -= 1;
+	}
+	void shrinkBottom(LabeledBoundingBox bb){
+		bb.h -= 1;
+	}
+	void shrink(LabeledBoundingBox bb){
+		bb.h -= 2;
+		bb.w -= 2;
+		bb.x += 1;
+		bb.y += 1;
+	}
+	void expand(LabeledBoundingBox bb) {
+		bb.h += 2;
+		bb.w += 2;
+		bb.x -= 1;
+		bb.y -= 1;
+	}
+	void expandLeft(LabeledBoundingBox bb) {
+
+		bb.x -= 1;
+		bb.w += 1;
+	}
+	void expandRight(LabeledBoundingBox bb){
+		bb.w += 1;
+	}
+	void expandTop(LabeledBoundingBox bb){
+		bb.y -= 1;
+		bb.h += 1;
+	}
+	void expandBottom(LabeledBoundingBox bb){
+		bb.h += 1;
+	}
 }

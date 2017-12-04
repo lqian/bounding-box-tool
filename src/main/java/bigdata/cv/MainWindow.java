@@ -7,16 +7,18 @@ import static javax.swing.JOptionPane.showConfirmDialog;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.List;
-import java.util.PriorityQueue;
 
 import javax.swing.AbstractAction;
 import javax.swing.BoxLayout;
@@ -25,6 +27,7 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -37,7 +40,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
 @SuppressWarnings("serial")
-public class MainWindow {
+public class MainWindow implements WindowListener{
 
 	private JFrame frame;
 	private JTextField txtDirectory;
@@ -45,27 +48,36 @@ public class MainWindow {
 	int totalFile;
 	int totalBoudingBoxLabels;
 
-	List<String> imageFiles = new ArrayList<String>();
+	List<String> imageFiles;
 
-	PriorityQueue<String> labelFiles = new PriorityQueue<String>(new StringComparator());
+	List<String> labelFiles;
 
 	LoadImageThread loadImageThread;
 
 	JLabel valTotalImage;
 
 	JLabel valTotalLabel;
+	
+	JLabel lblScalePercent;
+	
+	JLabel lblResolution ;
 
 	int currentImageIndex = -1;
 
 	ImagePanel imagePanel = new ImagePanel();
+	MonitorPanel  monitorPanel = new MonitorPanel();
+	
 	private JButton btnFirst;
 	private JButton btnPreviouse;
 	private JButton btnNext;
+	private JButton btnAutoNext;
 	private JButton btnLast;
+	JButton btnFind;
 	private JLabel lblFileName;
+	JLabel lblCurrentImageIndex;
 
 	JTable tblBoudingBox;
-	DefaultListModel<String> listModel = new DefaultListModel<String>();
+	DefaultTableModel tableModel;
 	private JButton btnCleanBoundingBox;
 	private JButton btnRemoveBoundingBox;
 	private JButton btnOpen;
@@ -75,6 +87,21 @@ public class MainWindow {
 	
 	Path datasetPath;
 
+	JButton moveLeft = new JButton("Move Left");
+	JButton moveRight = new JButton("Move Right");
+	JButton moveUp = new JButton("Move Up");
+	JButton moveDown = new JButton("Move Down");
+	
+	JButton expandLeft = new JButton("Expand Left");
+	JButton expandRight = new JButton("Expand Right");
+	JButton expandTop = new JButton("Expand Top");
+	JButton expandBottom = new JButton("Expand Bottom");
+	
+	JButton shrinkLeft = new JButton("Shrink Left");
+	JButton shrinkRight = new JButton("Shrink Right");
+	JButton shrinkTop = new JButton("Shrink Top");
+	JButton shinkBottom = new JButton("Shrink Bottom");
+	
 	/**
 	 * Launch the application.
 	 */
@@ -85,6 +112,7 @@ public class MainWindow {
 					MainWindow window = new MainWindow();
 					window.frame.setVisible(true);
 					window.frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+					window.frame.addWindowListener(window);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -108,13 +136,49 @@ public class MainWindow {
 
 	void initActions() {
 
-		imagePanel.labelFileListener = new LabelFileListener() {
+		imagePanel.listener = new ImagePanelListener() {
 
 			@Override
-			public void postLabelFileSave() {
-				int labels = Integer.valueOf(valTotalLabel.getText());
-				labels++;
-				valTotalLabel.setText(String.valueOf(labels));
+			public void postLabelFileSave(boolean update) {
+				if (!update) {
+					int labels = Integer.valueOf(valTotalLabel.getText());
+					labels++;
+					valTotalLabel.setText(String.valueOf(labels));
+				}
+			}
+
+			@Override
+			public void postScaled() {
+				String text = String.format("%.0f", 100 / imagePanel.scaleFactor); 
+				lblScalePercent.setText(text + "%");
+				
+			}
+
+			@Override
+			public void postCorp(BufferedImage image) {
+				monitorPanel.setImage(image);
+				tblBoudingBox.getSelectionModel().clearSelection();
+			}
+
+			@Override
+			public void postSelectedImage(BufferedImage image) {
+				monitorPanel.setImage(image);
+			}
+
+			@Override
+			public void postOpen() {
+				lblResolution.setText(String.format("%dX%d", imagePanel.imageWidth, imagePanel.imageHeight));
+			}
+
+			@Override
+			public void postChange(BufferedImage image) {
+				monitorPanel.setImage(image);
+			}
+
+			@Override
+			public void postChangeLabel(int row, LabeledBoundingBox bb) {
+				tableModel.setValueAt(bb.boundingBoxString(), row, 1);
+				
 			}
 		};
 		
@@ -126,6 +190,7 @@ public class MainWindow {
 					ListSelectionModel lsm = (ListSelectionModel) e.getSource();
 					int msi = lsm.getMinSelectionIndex();
 					imagePanel.selectBoundingBox(msi);
+					imagePanel.requestFocusInWindow();
 				}
 			}
 
@@ -137,6 +202,7 @@ public class MainWindow {
 			public void actionPerformed(ActionEvent e) {
 				int index = tblBoudingBox.getSelectedRow();
 				imagePanel.removeBoundingBox(index);
+				monitorPanel.clearImage();
 			}
 		});
 
@@ -145,6 +211,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				imagePanel.removeAllBoundingBox();
+				monitorPanel.clearImage();
 			}
 		});
 
@@ -155,6 +222,8 @@ public class MainWindow {
 				currentImageIndex = 0;
 				imagePanel.load(imageFiles.get(currentImageIndex));
 				lblFileName.setText(imageFiles.get(currentImageIndex));
+				monitorPanel.clearImage();
+				lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
 			}
 		});
 
@@ -165,28 +234,62 @@ public class MainWindow {
 				if (currentImageIndex < imageFiles.size() - 1) {
 					imagePanel.load(imageFiles.get(++currentImageIndex));
 					lblFileName.setText(imageFiles.get(currentImageIndex));
+					monitorPanel.clearImage();
+					lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
 				}
 			}
 		});
-
-		this.btnPreviouse.addActionListener(new ActionListener() {
+		
+		btnAutoNext.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				monitorPanel.clearImage();
+				autoLocateImage() ;
+				lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
+			}
+			
+		});
+
+		btnPreviouse.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				monitorPanel.clearImage();
 				if (currentImageIndex > 0) {
 					imagePanel.load(imageFiles.get(--currentImageIndex));
 					lblFileName.setText(imageFiles.get(currentImageIndex));
+					lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
 				}
 			}
 		});
 
-		this.btnLast.addActionListener(new ActionListener() {
+		btnLast.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				currentImageIndex = imageFiles.size() - 1;
 				imagePanel.load(imageFiles.get(currentImageIndex));
 				lblFileName.setText(imageFiles.get(currentImageIndex));
+				lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
+			}
+		});
+		
+		btnFind.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String image = JOptionPane.showInputDialog("image file name:");
+				if (image != null) {
+					for (int i=0; i < imageFiles.size(); i++) {
+						if (image.equals(imageFiles.get(i))) {
+							currentImageIndex = i;
+							imagePanel.load(imageFiles.get(currentImageIndex));
+							lblFileName.setText(imageFiles.get(currentImageIndex));
+							lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
+						}
+					}
+				}
 			}
 		});
 		
@@ -194,7 +297,7 @@ public class MainWindow {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-
+				
 				String imageFile = imageFiles.get(currentImageIndex);
 				String labelFile = "";
 				int i = imageFile.lastIndexOf(".");
@@ -205,12 +308,13 @@ public class MainWindow {
 				int ret = showConfirmDialog(frame, msg, "confirm delete image", YES_NO_OPTION);
 				if (ret == YES_OPTION) {
 					deleteCurrentFiles();
+					monitorPanel.clearImage();
 				}
 			}
 
 		});
 		
-		this.btnConvert.addActionListener(new ActionListener() {
+		btnConvert.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -227,11 +331,11 @@ public class MainWindow {
 		String fileName = imageFiles.get(currentImageIndex);
 		imageFiles.remove(currentImageIndex);
 		try {
-			Files.deleteIfExists(Paths.get(fileName));
+			Files.deleteIfExists(datasetPath.resolve(fileName));
 			int i = fileName.lastIndexOf(".");
 			if (i != -1) {
 				String labelFile = fileName.substring(0, i) + ".label";
-				Files.deleteIfExists(Paths.get(labelFile));
+				Files.deleteIfExists(datasetPath.resolve(labelFile));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -286,7 +390,7 @@ public class MainWindow {
 		centerPanel.setLayout(new BorderLayout(5, 5));
 
 		String[] columnNames = { "Label", "Bounding Box" };
-		DefaultTableModel tableModel = new DefaultTableModel(null, columnNames) {
+		tableModel = new DefaultTableModel(null, columnNames) {
 
 			@Override
 			public boolean isCellEditable(int row, int column) {
@@ -297,12 +401,62 @@ public class MainWindow {
 		JPanel toolBoxPanel = new JPanel();
 		frame.getContentPane().add(toolBoxPanel, BorderLayout.EAST);
 		toolBoxPanel.setLayout(new BorderLayout(5, 5));
-
+		JPanel centerToolBox = new JPanel();
+		toolBoxPanel.add(centerToolBox, BorderLayout.CENTER);
+		GridBagLayout gblCenterToolBox = new GridBagLayout();
+		centerToolBox.setLayout(gblCenterToolBox);
+		
+		gblCenterToolBox.columnWidths = new int[]{432, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		gblCenterToolBox.rowHeights = new int[]{22, 0, 0};
+		gblCenterToolBox.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+				 0.0, 0.0, 0.0, Double.MIN_VALUE};
+		gblCenterToolBox.rowWeights = new double[]{0.0, 0.0, Double.MIN_VALUE};
+		
 		tblBoudingBox = new JTable(tableModel);
 		tblBoudingBox.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblBoudingBox.getColumnModel().getColumn(0).setPreferredWidth(5);
+		
 		JScrollPane scrollPane = new JScrollPane(tblBoudingBox);
-		toolBoxPanel.add(scrollPane, BorderLayout.CENTER);
+		GridBagConstraints gbcScrollPane = new GridBagConstraints();
+		gbcScrollPane.anchor = GridBagConstraints.SOUTH;
+		gbcScrollPane.fill = GridBagConstraints.BOTH;
+		gbcScrollPane.gridx = 0;
+		gbcScrollPane.gridy = 0;
+		centerToolBox.add(scrollPane, gbcScrollPane);
+		
+		JPanel corpPanel = new JPanel();
+		GridBagConstraints gbcCorpPanel = new GridBagConstraints();
+		gbcCorpPanel.anchor = GridBagConstraints.NORTH;
+		gbcCorpPanel.fill = GridBagConstraints.BOTH;
+		gbcCorpPanel.gridx = 0;
+		gbcCorpPanel.gridy = 1;
+		gbcCorpPanel.gridheight = 1;
+		centerToolBox.add(monitorPanel, gbcCorpPanel);
+		
+		corpPanel.setLayout(new BorderLayout(10, 10));
+		
+//		JPanel corpNorth = new JPanel();
+//		corpNorth.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+//		corpNorth.add(moveUp);
+//		corpNorth.add(expandTop);
+//		corpNorth.add(shrinkTop);
+//
+//		JPanel corpSouth = new JPanel(); 
+//		corpSouth.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+//		corpSouth.add(moveDown);
+//		corpSouth.add(expandBottom);
+//		corpSouth.add(shinkBottom);
+//		
+//		JPanel corpWest = new JPanel();
+//		corpWest.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+//		corpWest.add(moveLeft);
+//		corpWest.add(expandLeft);
+//		corpWest.add(shrinkLeft);
+//		
+//		corpPanel.add(corpNorth, BorderLayout.NORTH);
+//		corpPanel.add(corpSouth, BorderLayout.SOUTH);
+//		corpPanel.add(corpWest, BorderLayout.WEST);
+//		corpPanel.add(monitorPanel, BorderLayout.CENTER);
 
 		JPanel buttonPane = new JPanel();
 		buttonPane.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
@@ -335,9 +489,15 @@ public class MainWindow {
 
 		btnNext = new JButton(">>");
 		navPanel.add(btnNext);
+		
+		btnAutoNext = new JButton("->>");
+		navPanel.add(btnAutoNext);
 
 		btnLast = new JButton(">|");
 		navPanel.add(btnLast);
+		
+		btnFind = new JButton("Find");
+		navPanel.add(btnFind);
 
 		JLabel lblTotalImage = new JLabel("Total Image:");
 		statusPanel.add(lblTotalImage);
@@ -353,7 +513,16 @@ public class MainWindow {
 
 		lblFileName = new JLabel("");
 		statusPanel.add(lblFileName);
-
+		
+		lblCurrentImageIndex = new JLabel("");
+		statusPanel.add(lblCurrentImageIndex);
+		
+		this.lblScalePercent = new JLabel("");
+		statusPanel.add(lblScalePercent);
+		
+		lblResolution = new JLabel("");
+		statusPanel.add(lblResolution);
+		
 		frame.pack();
 	}
 
@@ -381,12 +550,32 @@ public class MainWindow {
 			if (returnVal == JFileChooser.APPROVE_OPTION) {
 				if (txtDirectory != null) {
 					txtDirectory.setText(chooser.getSelectedFile().getAbsolutePath());
+					monitorPanel.clearImage();
 				}
 				loadImageThread = new LoadImageThread(chooser.getSelectedFile().toPath());
 				loadImageThread.start();
 			}
 		}
 	}
+	
+	private void autoLocateImage() {
+		currentImageIndex = 0;
+		if (labelFiles.size() > 0) {
+			for (; currentImageIndex < imageFiles.size(); currentImageIndex++) {
+				String imageFile = imageFiles.get(currentImageIndex);
+				int i = imageFile.lastIndexOf(".");
+				String labelFile = imageFile.substring(0, i) + ".label";
+				if (Files.notExists(datasetPath.resolve(labelFile))) {
+					break;
+				}
+			}
+		}
+		if (currentImageIndex >= imageFiles.size()) 
+			currentImageIndex = 0;
+		imagePanel.load(imageFiles.get(currentImageIndex));
+		lblFileName.setText(imageFiles.get(currentImageIndex));
+	}
+	
 
 	class LoadImageThread extends Thread {
 		Path path;
@@ -398,34 +587,60 @@ public class MainWindow {
 
 		public void run() {
 			try {
-				DataSetVisitor visitor = new DataSetVisitor(labelFiles);
+				DataSetVisitor visitor = new DataSetVisitor();
 				Files.walkFileTree(path, visitor);
+				Collections.sort(visitor.imageFiles);
+				Collections.sort(visitor.labelFiles);
 				totalFile = visitor.imageFiles.size();
-				imageFiles.addAll(visitor.imageFiles);
+				imageFiles = visitor.imageFiles;
+				labelFiles =  visitor.labelFiles;
 				valTotalImage.setText(String.valueOf(totalFile));
 				totalBoudingBoxLabels = visitor.labelFiles.size();
 				valTotalLabel.setText(String.valueOf(totalBoudingBoxLabels));
 
 				// locate the first un-labeled image
-				currentImageIndex = 0;
-				if (labelFiles.size() > 0) {
-					for (; currentImageIndex < imageFiles.size(); currentImageIndex++) {
-						String imageFile = imageFiles.get(currentImageIndex);
-						int i = imageFile.lastIndexOf(".");
-						String labelFile = imageFile.substring(0, i) + ".label";
-						if (Files.notExists(path.resolve(labelFile))) {
-							break;
-						}
-					}
-				}
 				datasetPath = path;
 				imagePanel.datasetPath = path;
-				imagePanel.load(imageFiles.get(currentImageIndex));
-				lblFileName.setText(imageFiles.get(currentImageIndex));
+				autoLocateImage();
 				btnDelPicture.setEnabled(true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	@Override
+	public void windowOpened(WindowEvent e) {
+		
+	}
+
+	@Override
+	public void windowClosing(WindowEvent e) {
+		if (this.imagePanel.hasChanged) {
+			imagePanel.saveLabelsToFile();
+		}
+	}
+
+	@Override
+	public void windowClosed(WindowEvent e) {
+		
+	}
+
+	@Override
+	public void windowIconified(WindowEvent e) {
+		
+	}
+
+	@Override
+	public void windowDeiconified(WindowEvent e) {
+	}
+
+	@Override
+	public void windowActivated(WindowEvent e) {
+		
+	}
+
+	@Override
+	public void windowDeactivated(WindowEvent e) {
 	}
 }

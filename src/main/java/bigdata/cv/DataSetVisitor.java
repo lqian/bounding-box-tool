@@ -8,7 +8,8 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.PriorityQueue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -20,18 +21,13 @@ public class DataSetVisitor implements FileVisitor<Path> {
 
 	static Set<String> extensions = new TreeSet<String>();
 	
-	PriorityQueue<String> imageFiles = new PriorityQueue<String>(new StringComparator());
+	List<String> imageFiles = new ArrayList<>();
 	
-	PriorityQueue<String> labelFiles;
+	List<String> labelFiles = new ArrayList<>();
 
 	static {
 		extensions.add("jpg");
-//		extensions.add("png");
-	}
-	
-	public DataSetVisitor(PriorityQueue<String> labelFiles) {
-		super();
-		this.labelFiles = labelFiles;
+		extensions.add("png");
 	}
 
 	@Override
