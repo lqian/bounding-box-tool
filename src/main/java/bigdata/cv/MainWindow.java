@@ -22,11 +22,13 @@ import java.util.List;
 
 import javax.swing.AbstractAction;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -40,7 +42,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 
 @SuppressWarnings("serial")
-public class MainWindow implements WindowListener{
+public class MainWindow implements WindowListener {
 
 	private JFrame frame;
 	private JTextField txtDirectory;
@@ -67,25 +69,31 @@ public class MainWindow implements WindowListener{
 	ImagePanel imagePanel = new ImagePanel();
 	MonitorPanel  monitorPanel = new MonitorPanel();
 	
-	private JButton btnFirst;
-	private JButton btnPreviouse;
-	private JButton btnNext;
-	private JButton btnAutoNext;
-	private JButton btnLast;
+	JMenuBar menuBar = new JMenuBar();
+	
+	JMenu fileMenu = new JMenu("File");
+	
+	JMenu editMenu = new JMenu("Edit");
+	
+	JMenu utilMenu = new JMenu("Utility");
+	
+	JMenu aboutMenu = new JMenu("About");
+	
+	 JButton btnFirst;
+	 JButton btnPreviouse;
+	 JButton btnNext;
+	 JButton btnAutoNext;
+	 JButton btnLast;
 	JButton btnFind;
-	private JLabel lblFileName;
+	 JLabel lblFileName;
 	JLabel lblCurrentImageIndex;
 
 	JTable tblBoudingBox;
 	DefaultTableModel tableModel;
 	private JButton btnCleanBoundingBox;
 	private JButton btnRemoveBoundingBox;
-	private JButton btnOpen;
-	private JButton btnDelPicture;
-	private JButton btnAbout;
-	private JButton btnConvert;
 	
-	Path datasetPath;
+	DataSet dataSet;
 
 	JButton moveLeft = new JButton("Move Left");
 	JButton moveRight = new JButton("Move Right");
@@ -101,6 +109,14 @@ public class MainWindow implements WindowListener{
 	JButton shrinkRight = new JButton("Shrink Right");
 	JButton shrinkTop = new JButton("Shrink Top");
 	JButton shinkBottom = new JButton("Shrink Bottom");
+	
+	private JMenuItem openMenu;
+	private JMenuItem deleteMenu;
+	private JMenuItem exitMenu;
+	private JMenuItem convertMenu;
+	private JMenuItem corpMenu;
+	private JMenuItem findByNameMenu;
+	private JMenuItem findByClassMenu;
 	
 	/**
 	 * Launch the application.
@@ -136,6 +152,7 @@ public class MainWindow implements WindowListener{
 
 	void initActions() {
 
+		openMenu.addActionListener(new OpenFileAction());
 		imagePanel.listener = new ImagePanelListener() {
 
 			@Override
@@ -178,7 +195,6 @@ public class MainWindow implements WindowListener{
 			@Override
 			public void postChangeLabel(int row, LabeledBoundingBox bb) {
 				tableModel.setValueAt(bb.boundingBoxString(), row, 1);
-				
 			}
 		};
 		
@@ -193,7 +209,6 @@ public class MainWindow implements WindowListener{
 					imagePanel.requestFocusInWindow();
 				}
 			}
-
 		});
 
 		btnRemoveBoundingBox.addActionListener(new ActionListener() {
@@ -275,7 +290,7 @@ public class MainWindow implements WindowListener{
 			}
 		});
 		
-		btnFind.addActionListener(new ActionListener() {
+		ActionListener findActionListener = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -291,9 +306,11 @@ public class MainWindow implements WindowListener{
 					}
 				}
 			}
-		});
+		};
+		btnFind.addActionListener(findActionListener);
+		findByNameMenu.addActionListener(findActionListener);
 		
-		btnDelPicture.addActionListener(new ActionListener() {
+		deleteMenu.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -311,31 +328,44 @@ public class MainWindow implements WindowListener{
 					monitorPanel.clearImage();
 				}
 			}
-
 		});
 		
-		btnConvert.addActionListener(new ActionListener() {
+		ActionListener convertActionListener = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ConvertDialog dialog = new ConvertDialog(frame, true, datasetPath);
+				ConvertDialog dialog = new ConvertDialog(frame, true, dataSet);
 				dialog.setVisible(true);
 				dialog.setAlwaysOnTop(true);
 				dialog.setLocationRelativeTo(frame);
 			}
 			
-		});
+		};
+		convertMenu.addActionListener(convertActionListener);
+		
+		ActionListener corpActionListener = new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				CorpDialog dialog = new CorpDialog(frame, true, dataSet);
+				dialog.setVisible(true);
+				dialog.setAlwaysOnTop(true);
+				dialog.setLocationRelativeTo(frame);
+			}
+		};
+		
+		corpMenu.addActionListener(corpActionListener);
 	}
 
 	void deleteCurrentFiles() {
 		String fileName = imageFiles.get(currentImageIndex);
 		imageFiles.remove(currentImageIndex);
 		try {
-			Files.deleteIfExists(datasetPath.resolve(fileName));
+			Files.deleteIfExists(dataSet.getImage(fileName));
 			int i = fileName.lastIndexOf(".");
 			if (i != -1) {
 				String labelFile = fileName.substring(0, i) + ".label";
-				Files.deleteIfExists(datasetPath.resolve(labelFile));
+				Files.deleteIfExists(dataSet.getRawLabel(labelFile));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -353,29 +383,58 @@ public class MainWindow implements WindowListener{
 	/**
 	 * Initialize the contents of the frame.
 	 */
+	void initializeMenus() {
+		frame.setJMenuBar(menuBar);
+		
+		menuBar.add(fileMenu);
+		openMenu = new JMenuItem("Open Dataset");
+		fileMenu.add(openMenu);
+		deleteMenu = new JMenuItem("Del Image");
+		fileMenu.add(deleteMenu);
+		deleteMenu.setEnabled(false);
+		fileMenu.addSeparator();
+		exitMenu = new JMenuItem("Exit");
+		fileMenu.add(exitMenu);
+		
+//		menuBar.add(editMenu);
+		
+		menuBar.add(utilMenu);
+		convertMenu = new JMenuItem("Convert Coordinates");
+		utilMenu.add(convertMenu);
+		corpMenu = new JMenuItem("Corp Vehicle Relative Coordinates");
+		utilMenu.add(corpMenu);
+		
+		findByNameMenu = new JMenuItem("Find By Name");
+		utilMenu.add(findByNameMenu);
+		
+		findByClassMenu = new JMenuItem("Find By Class");
+		utilMenu.add(findByClassMenu);
+		
+		menuBar.add(aboutMenu);
+	}
 	
 	private void initialize() {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new BorderLayout(10, 10));
+		
+		
+		initializeMenus();
 
-		JToolBar toolBar = new JToolBar();
-		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
-		btnOpen = new JButton("Open DataSet");
-		btnOpen.setAction(new OpenFileAction());
-		toolBar.add(btnOpen);
+//		JToolBar toolBar = new JToolBar();
+//		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
+//		btnOpen = new JButton("Open DataSet");
+//		btnOpen.setAction(new OpenFileAction());
+//		toolBar.add(btnOpen);
 
-		btnDelPicture = new JButton();
-		toolBar.add(btnDelPicture);
-		btnDelPicture.setText("Delete Picutre");
-		btnDelPicture.setEnabled(false);
+//		btnDelPicture = new JButton();
+//		toolBar.add(btnDelPicture);
+//		btnDelPicture.setText("Delete Picutre");
+//		btnDelPicture.setEnabled(false);
 
-		btnConvert = new JButton("Convert");
-		toolBar.add(btnConvert);
-
-		btnAbout = new JButton("About");
-		toolBar.add(btnAbout);
+//		btnConvert = new JButton("Convert");
+//		toolBar.add(btnConvert);
 
 		JButton btnOpenFile = new JButton("Open");
 		btnOpenFile.setAction(new OpenFileAction(txtDirectory));
@@ -496,7 +555,7 @@ public class MainWindow implements WindowListener{
 		btnLast = new JButton(">|");
 		navPanel.add(btnLast);
 		
-		btnFind = new JButton("Find");
+		btnFind = new JButton("??");
 		navPanel.add(btnFind);
 
 		JLabel lblTotalImage = new JLabel("Total Image:");
@@ -544,6 +603,7 @@ public class MainWindow implements WindowListener{
 		}
 
 		public void actionPerformed(ActionEvent e) {
+			imagePanel.enabled = false;
 			JFileChooser chooser = new JFileChooser();
 			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			int returnVal = chooser.showOpenDialog(frame);
@@ -565,7 +625,7 @@ public class MainWindow implements WindowListener{
 				String imageFile = imageFiles.get(currentImageIndex);
 				int i = imageFile.lastIndexOf(".");
 				String labelFile = imageFile.substring(0, i) + ".label";
-				if (Files.notExists(datasetPath.resolve(labelFile))) {
+				if (Files.notExists(dataSet.getRawLabel(labelFile))) {
 					break;
 				}
 			}
@@ -587,22 +647,20 @@ public class MainWindow implements WindowListener{
 
 		public void run() {
 			try {
-				DataSetVisitor visitor = new DataSetVisitor();
-				Files.walkFileTree(path, visitor);
-				Collections.sort(visitor.imageFiles);
-				Collections.sort(visitor.labelFiles);
-				totalFile = visitor.imageFiles.size();
-				imageFiles = visitor.imageFiles;
-				labelFiles =  visitor.labelFiles;
+				dataSet = new DataSet(path);
+				totalFile = dataSet.imageFiles.size();
+				imageFiles = dataSet.imageFiles;
+				labelFiles =  dataSet.rawLabelFiles;
 				valTotalImage.setText(String.valueOf(totalFile));
-				totalBoudingBoxLabels = visitor.labelFiles.size();
+				totalBoudingBoxLabels = dataSet.rawLabelFiles.size();
 				valTotalLabel.setText(String.valueOf(totalBoudingBoxLabels));
 
 				// locate the first un-labeled image
-				datasetPath = path;
-				imagePanel.datasetPath = path;
+				imagePanel.dataSet = dataSet;
 				autoLocateImage();
-				btnDelPicture.setEnabled(true);
+//				btnDelPicture.setEnabled(true);
+				deleteMenu.setEnabled(true);
+				imagePanel.enabled = true;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

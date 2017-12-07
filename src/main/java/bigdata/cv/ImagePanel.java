@@ -52,9 +52,9 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 			"yellow_label", "Standard_Practice", "temporary_plate" };
 	DefaultTableModel tableModel;
 
-	Path datasetPath;
+	DataSet dataSet;
 	String imageFile;
-	String labelFile;
+	String rawLabelFile;
 
 	/**
 	 * copred bounding boxes
@@ -84,6 +84,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	int selectBoundingBoxIndex = -1;
 	
 	ImagePanelListener  listener;
+	
+	boolean enabled = false;
 
 	public ImagePanel() {
 		super();
@@ -128,9 +130,9 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 			String msg = "not found extension name for file:\n" + imageFile;
 			showWarningMsg(msg);
 		} else {
-			labelFile = imageFile.substring(0, i) + ".label";
+			rawLabelFile = imageFile.substring(0, i) + ".label";
 			try {
-				image = ImageIO.read(new File(datasetPath.toFile(), imageFile));
+				image = ImageIO.read(dataSet.getImage(imageFile).toFile());
 				imageWidth = image.getWidth();
 				imageHeight = image.getHeight();
 				listener.postOpen();
@@ -154,7 +156,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public void loadExistedBoundingBox() {
-		Path path = datasetPath.resolve(labelFile);
+		Path path = dataSet.getRawLabel(rawLabelFile);
 		if (Files.exists(path)) {
 			try {
 				BufferedReader reader = Files.newBufferedReader(path);
@@ -169,7 +171,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				renderTableModel();
 			} catch (IOException e) {
 				e.printStackTrace();
-				showWarningMsg("cannot read label file:\n" + labelFile);
+				showWarningMsg("cannot read label file:\n" + rawLabelFile);
 			}
 		}
 	}
@@ -184,10 +186,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	public void saveLabelsToFile() {
 		int i = imageFile.lastIndexOf(".");
 		if (i != -1) {
-			
 			try {
-				
-				Path path = datasetPath.resolve(labelFile);
+				Path path = dataSet.getRawLabel(rawLabelFile);
 				boolean update = Files.exists(path);
 				BufferedWriter writer = Files.newBufferedWriter(path, Charset.defaultCharset());
 				writer.write(this.imageWidth + "," + this.imageHeight);
@@ -202,7 +202,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				listener.postLabelFileSave(update);
 			} catch (IOException e) {
 				e.printStackTrace();
-				showWarningMsg("cannot write label file:\n" + labelFile);
+				showWarningMsg("cannot write label file:\n" + rawLabelFile);
 			}
 		}
 	}
@@ -226,6 +226,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public void paint(Graphics g) {
+		if (!enabled) return;
 		int pw = this.getWidth();
 		int ph = this.getHeight();
 		g.setColor(this.getBackground());

@@ -15,15 +15,11 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.PriorityQueue;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -36,7 +32,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 
 /**
- * @author qian xiafei
+ * @author lqian
  *
  */
 public class ConvertDialog extends JDialog implements ItemListener {
@@ -46,11 +42,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	 */
 	private static final long serialVersionUID = -7812674426324601391L;
 
-	Path datasetPath;
-
-	Path labelsPath;
-
-	Path jpegImages;
+	DataSet dataSet;
 
 	JTextField tfDatasetPath;
 
@@ -59,22 +51,16 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	JButton btnConvert;
 
 	JLabel lblStatus;
-	
+
 	JCheckBox onlyGenTrainAndValSet;
-	
-	JCheckBox samePath;
-	
+
 	ButtonGroup group = new ButtonGroup();
-	
+
 	String suffix;
 
-	public ConvertDialog(Frame owner, boolean modal, Path datasetPath) {
+	public ConvertDialog(Frame owner, boolean modal, DataSet dataSet) {
 		super(owner, "convert label", modal);
-		this.datasetPath = datasetPath;
-		if (datasetPath != null) {
-			this.labelsPath = datasetPath.resolve("labels");
-			this.jpegImages = datasetPath.resolve("JPEGImages");
-		}
+		this.dataSet = dataSet;
 
 		initialize();
 
@@ -82,7 +68,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	}
 
 	void initializeActions() {
-		
+
 		btnOpen.addActionListener(new ActionListener() {
 
 			@Override
@@ -93,9 +79,11 @@ public class ConvertDialog extends JDialog implements ItemListener {
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					tfDatasetPath.setText(chooser.getSelectedFile().getAbsolutePath());
 					btnConvert.setEnabled(true);
-					datasetPath = chooser.getSelectedFile().toPath();
-					labelsPath = datasetPath.resolve("labels");
-					jpegImages = datasetPath.resolve("JPEGImages");
+					try {
+						dataSet = new DataSet(chooser.getSelectedFile().toPath());
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 				}
 			}
 		});
@@ -105,11 +93,9 @@ public class ConvertDialog extends JDialog implements ItemListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				
+
 				if (onlyGenTrainAndValSet.isSelected()) {
-					File[] images  = jpegImages.toFile().listFiles();
-					List<String> list = new ArrayList<>();
-					Arrays.asList(images).forEach( f -> list.add(f.getName()) );;
+					List<String> list = dataSet.imageFiles;
 					try {
 						DatasetCensus rest = genTrainAndValSet(list, false);
 						lblStatus.setText(String.format(" generate train set count: %d, val set count: %d",
@@ -118,23 +104,16 @@ public class ConvertDialog extends JDialog implements ItemListener {
 						e1.printStackTrace();
 					}
 				} else {
-					PriorityQueue<String> rawLabelFiles = new PriorityQueue<>();
-					DataSetVisitor visitor = new DataSetVisitor();
 					try {
 						int counter = 0;
-						Files.walkFileTree(jpegImages, visitor);
-						rawLabelFiles.addAll(visitor.labelFiles);
-						ArrayList<String> list = new ArrayList<>();
-						list.addAll(rawLabelFiles);
-						String file;
-						while (!rawLabelFiles.isEmpty()) {
-							file = rawLabelFiles.poll();
+						List<String> list = dataSet.rawLabelFiles;
+						for (String file : list) {
 							counter += convertLabel(file);
 							if (counter % 1000 == 0) {
 								lblStatus.setText(counter + "");
 							}
 						}
-						
+
 						DatasetCensus rest = genTrainAndValSet(list, true);
 						genClassNameFile();
 						lblStatus.setText(String.format("convert labeles: %d, train set count: %d, val set count: %d",
@@ -148,7 +127,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	}
 
 	void genClassNameFile() throws IOException {
-		Path path = datasetPath.resolve("itd.names");
+		Path path = dataSet.resolve("itd.names");
 		BufferedWriter writer = Files.newBufferedWriter(path);
 		for (String name : ImagePanel.clazzNames_Eng) {
 			writer.write(name);
@@ -167,48 +146,31 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		DatasetCensus dc = new DatasetCensus();
 		int tc = 0, vc = 0;
 		Collections.shuffle(labelList);
-		Path trainSet = datasetPath.resolve("train.txt");
-		Path valSet = datasetPath.resolve("val.txt");
+		Path trainSet = dataSet.resolve("train.txt");
+		Path valSet = dataSet.resolve("val.txt");
 		BufferedWriter trainWriter = Files.newBufferedWriter(trainSet);
 		BufferedWriter valWriter = Files.newBufferedWriter(valSet);
-		
+
 		for (int i = 0; i < labelList.size(); i++) {
 			String labelFile = labelList.get(i);
-//			Path labelPath = samePath.isSelected() ?  jpegImages.resolve(labelFile.replace(".jpg", "."+ suffix )): 
-//				    labelsPath.resolve(labelFile.replace(".jpg", "."+ suffix ));
-//			
-//			BufferedReader reader = Files.newBufferedReader(labelPath);
-//			String line =null;
-//			boolean zero = false;
-//			while (!zero && (line = reader.readLine()) != null) {
-//				String tokens[] = line.split("\\s");
-//				double w = Double.valueOf(tokens[2]);
-//				double h = Double.valueOf(tokens[3]);
-//				zero =  (w==0 || h ==0);
-//			}
-//			reader.close();
-//			
-//			if (zero) {
-//				continue;
-//			}
-			
-		   if (convertLabel(labelFile) == 0) continue;
-			
-			Path imagePath = jpegImages.resolve(labelFile.replace("." + suffix, ".jpg"));
+
+			if (convertLabel(labelFile) == 0)
+				continue;
+
+			Path imagePath = dataSet.getImage(labelFile.replace("." + suffix, ".jpg"));
 			if (Files.exists(imagePath)) {
-//			if (i % 3 == 0) {
+				// if (i % 3 == 0) {
 				trainWriter.write(imagePath.toString());
 				trainWriter.newLine();
 				tc++;
-//			}
-//			else {
-			if  (i % 3 == 0) {
-				valWriter.write(imagePath.toString());
-				valWriter.newLine();
-				vc++;
-			}
-			}
-			else {
+				// }
+				// else {
+				if (i % 3 == 0) {
+					valWriter.write(imagePath.toString());
+					valWriter.newLine();
+					vc++;
+				}
+			} else {
 				System.out.println("not exists image: " + imagePath);
 			}
 		}
@@ -216,7 +178,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		trainWriter.close();
 		valWriter.close();
 		dc.trainCount = tc;
-		dc.valCount  = vc;
+		dc.valCount = vc;
 		return dc;
 	}
 
@@ -230,11 +192,10 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	}
 
 	/**
-	 * boundbox(x, y, w, h) -> darknet_boundbox(dx, dy, dw, dh)
-	 * dx =  ((2x + w) /  2 -1) / image width
-	 * dy = (( 2y + h ) / 2 -1) / image height
-	 * dw = w / image width
-	 * dy = h / image height
+	 * boundbox(x, y, w, h) -> darknet_boundbox(dx, dy, dw, dh) dx = ((2x + w) /
+	 * 2 -1) / image width dy = (( 2y + h ) / 2 -1) / image height dw = w /
+	 * image width dy = h / image height
+	 * 
 	 * @param sn
 	 * @return
 	 * @throws IOException
@@ -242,10 +203,10 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	int convertLabel(String sn) throws IOException {
 		int c = 0;
 		String tn = sn.replace(".label", ".txt");
-		Path txt = labelsPath.resolve(tn);
+		Path txt = dataSet.getDarknetLabel(tn);
 
 		BufferedWriter writer = Files.newBufferedWriter(txt);
-		BufferedReader reader = Files.newBufferedReader(jpegImages.resolve(sn));
+		BufferedReader reader = Files.newBufferedReader(dataSet.getRawLabel(sn));
 		String line = reader.readLine();
 		int width = 0, height = 0;
 		if (line != null) {
@@ -262,8 +223,8 @@ public class ConvertDialog extends JDialog implements ItemListener {
 				if (bb != null) {
 					double dw = 1.0 / width;
 					double dh = 1.0 / height;
-					double x = ((bb.x * 2 + bb.w) / 2  - 1 ) *  dw;
-					double y = ((bb.y * 2 + bb.h) / 2 - 1) *dh;
+					double x = ((bb.x * 2 + bb.w) / 2 - 1) * dw;
+					double y = ((bb.y * 2 + bb.h) / 2 - 1) * dh;
 					double w = bb.w * dw;
 					double h = bb.h * dh;
 
@@ -282,22 +243,15 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		JPanel north = new JPanel();
 		getContentPane().add(north, BorderLayout.NORTH);
 		GridBagLayout gbl_north = new GridBagLayout();
-		// gbl_north.columnWidths = new int[]{432, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		// gbl_north.rowHeights = new int[]{22, 0, 0};
-		// gbl_north.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-		// 0.0, 0.0, 0.0, Double.MIN_VALUE};
-		// gbl_north.rowWeights = new double[]{0.0, 0.0, Double.MIN_VALUE};
 		north.setLayout(gbl_north);
 
 		tfDatasetPath = new JTextField();
-		if (datasetPath != null) {
-			tfDatasetPath.setText(datasetPath.toString());
+		if (dataSet != null) {
+			tfDatasetPath.setText(dataSet.home.toString());
 		}
 		GridBagConstraints gbc_tfDatasetPath = new GridBagConstraints();
 		gbc_tfDatasetPath.fill = GridBagConstraints.BOTH;
 		gbc_tfDatasetPath.gridwidth = 10;
-
-		// gbc_textField.insets = new Insets(0, 0, 5, 0);
 
 		btnOpen = new JButton("Open");
 		btnOpen.setToolTipText("Open Dataset");
@@ -324,36 +278,32 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		gbc_btnConvert.gridy = 0;
 		north.add(btnConvert, gbc_btnConvert);
 
-		JRadioButton radion1 =new JRadioButton("lbl"); 
-		JRadioButton radion3 =new JRadioButton("label"); 
-		JRadioButton radion2 =new JRadioButton("txt"); 
+		JRadioButton radion1 = new JRadioButton("lbl");
+		JRadioButton radion2 = new JRadioButton("txt");
+		JRadioButton radion3 = new JRadioButton("label");
 		radion1.addItemListener(this);
 		radion2.addItemListener(this);
 		radion3.addItemListener(this);
-		
+		radion3.setSelected(true);
+
 		GridBagConstraints gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.EAST;
 		gbc.gridx = 0;
 		gbc.gridy = 1;
 		north.add(radion1, gbc);
-		
+
 		gbc.gridx = 1;
 		gbc.gridy = 1;
 		north.add(radion2, gbc);
-		
+
 		gbc.gridx = 2;
 		gbc.gridy = 1;
 		north.add(radion3, gbc);
-		
+
 		group.add(radion1);
 		group.add(radion2);
 		group.add(radion3);
-		
-		samePath = new JCheckBox("label file and image in the same directory");
-		gbc.gridx = 3;
-		gbc.gridy = 1;
-		north.add(samePath, gbc);
-		
+
 		onlyGenTrainAndValSet = new JCheckBox("only generate Train and Validate Set");
 		GridBagConstraints gbc_checkBox = new GridBagConstraints();
 		gbc_checkBox.anchor = GridBagConstraints.EAST;
@@ -361,7 +311,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		gbc_checkBox.gridx = 4;
 		gbc_checkBox.gridy = 1;
 		north.add(onlyGenTrainAndValSet, gbc_checkBox);
-		
+
 		JPanel sourth = new JPanel();
 		getContentPane().add(sourth, BorderLayout.SOUTH);
 
@@ -379,7 +329,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 
 	@Override
 	public void itemStateChanged(ItemEvent e) {
-		JRadioButton s = (JRadioButton)e.getSource();
+		JRadioButton s = (JRadioButton) e.getSource();
 		suffix = s.getText();
 	}
 }

@@ -8,7 +8,7 @@ import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 
 /**
- * @author link
+ * @author lqian
  *
  */
 public class BBConfiguration {
