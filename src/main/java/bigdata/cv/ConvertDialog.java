@@ -1,9 +1,25 @@
-/**
+/*
  * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package bigdata.cv;
 
-import java.awt.BorderLayout;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
@@ -18,8 +34,11 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -27,7 +46,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 
@@ -45,7 +63,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	DataSet dataSet;
 
 	JTextField tfDatasetPath;
-
+	
 	JButton btnOpen;
 
 	JButton btnConvert;
@@ -57,11 +75,17 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	ButtonGroup group = new ButtonGroup();
 
 	String suffix;
-
-	public ConvertDialog(Frame owner, boolean modal, DataSet dataSet) {
+	
+	LabelConfig labelConfig;
+	
+	List<JCheckBox> clazzes = new ArrayList<>();
+	
+	Set<String> selectedClazz = new HashSet<>();
+	
+	public ConvertDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
 		super(owner, "convert label", modal);
 		this.dataSet = dataSet;
-
+		this.labelConfig = labelConfig;
 		initialize();
 
 		initializeActions();
@@ -93,7 +117,14 @@ public class ConvertDialog extends JDialog implements ItemListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-
+				selectedClazz.clear();
+				
+				for (JCheckBox clazz: clazzes) {
+					if (clazz.isSelected()) {
+						selectedClazz.add(clazz.getText());
+					}
+				}
+				
 				if (onlyGenTrainAndValSet.isSelected()) {
 					List<String> list = dataSet.imageFiles;
 					try {
@@ -129,8 +160,8 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	void genClassNameFile() throws IOException {
 		Path path = dataSet.resolve("itd.names");
 		BufferedWriter writer = Files.newBufferedWriter(path);
-		for (String name : ImagePanel.clazzNames_Eng) {
-			writer.write(name);
+		for (String name : labelConfig.clazzNames) {
+			writer.write(labelConfig.getAliases(name));
 			writer.newLine();
 		}
 		writer.close();
@@ -182,14 +213,6 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		return dc;
 	}
 
-	int getClassIdByName(String className) {
-		int i = 0;
-		for (; i < ImagePanel.clazzNames.length; i++) {
-			if (className.equalsIgnoreCase(ImagePanel.clazzNames[i]))
-				break;
-		}
-		return i;
-	}
 
 	/**
 	 * boundbox(x, y, w, h) -> darknet_boundbox(dx, dy, dw, dh) dx = ((2x + w) /
@@ -227,8 +250,8 @@ public class ConvertDialog extends JDialog implements ItemListener {
 					double y = ((bb.y * 2 + bb.h) / 2 - 1) * dh;
 					double w = bb.w * dw;
 					double h = bb.h * dh;
-
-					writer.write(String.format("%d %f %f %f %f", getClassIdByName(bb.labelName), x, y, w, h));
+					
+					writer.write(String.format("%d %f %f %f %f", labelConfig.getAliases(bb.labelName), x, y, w, h));
 					writer.newLine();
 					c++;
 				}
@@ -240,44 +263,39 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	}
 
 	void initialize() {
-		JPanel north = new JPanel();
-		getContentPane().add(north, BorderLayout.NORTH);
-		GridBagLayout gbl_north = new GridBagLayout();
-		north.setLayout(gbl_north);
-
+		Container pane = getContentPane();
+		getContentPane().setLayout(new GridBagLayout());
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.anchor = GridBagConstraints.WEST; 
+		
 		tfDatasetPath = new JTextField();
 		if (dataSet != null) {
 			tfDatasetPath.setText(dataSet.home.toString());
 		}
-		GridBagConstraints gbc_tfDatasetPath = new GridBagConstraints();
-		gbc_tfDatasetPath.fill = GridBagConstraints.BOTH;
-		gbc_tfDatasetPath.gridwidth = 10;
-
+		tfDatasetPath.setColumns(50);
+		tfDatasetPath.setEditable(false);
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.gridwidth = 8;
+		pane.add(tfDatasetPath, gbc);
+		
 		btnOpen = new JButton("Open");
 		btnOpen.setToolTipText("Open Dataset");
-		GridBagConstraints gbc_btnOpen = new GridBagConstraints();
-		gbc_btnOpen.anchor = GridBagConstraints.WEST;
-		gbc_btnOpen.gridx = 0;
-		gbc_btnOpen.gridy = 0;
-		north.add(btnOpen, gbc_btnOpen);
+		gbc.gridx = 8;
+		gbc.gridy = 0;
+		gbc.gridwidth = 1;
+		pane.add(btnOpen, gbc); 
 
-		gbc_tfDatasetPath.anchor = GridBagConstraints.CENTER;
-		gbc_tfDatasetPath.gridx = 1;
-		gbc_tfDatasetPath.gridy = 0;
-		gbc_tfDatasetPath.gridwidth = 8;
-		north.add(tfDatasetPath, gbc_tfDatasetPath);
-		tfDatasetPath.setColumns(100);
-		tfDatasetPath.setEditable(false);
-
-		btnConvert = new JButton("Convert");
-		btnConvert.setEnabled(false);
-		GridBagConstraints gbc_btnConvert = new GridBagConstraints();
-		gbc_btnConvert.anchor = GridBagConstraints.EAST;
-		gbc_btnConvert.gridwidth = 1;
-		gbc_btnConvert.gridx = 9;
-		gbc_btnConvert.gridy = 0;
-		north.add(btnConvert, gbc_btnConvert);
-
+		gbc.gridwidth = 1;
+		for (int i = 0 ; i< labelConfig.clazzNames.length; ++i) {
+			gbc.gridx = i % 9;
+			gbc.gridy = 1 + i / 9;
+			JCheckBox cb = new JCheckBox(labelConfig.clazzNames[i], true);
+			pane.add(cb, gbc);
+			clazzes.add(cb);
+		}
+		
 		JRadioButton radion1 = new JRadioButton("lbl");
 		JRadioButton radion2 = new JRadioButton("txt");
 		JRadioButton radion3 = new JRadioButton("label");
@@ -285,39 +303,47 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		radion2.addItemListener(this);
 		radion3.addItemListener(this);
 		radion3.setSelected(true);
-
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.EAST;
-		gbc.gridx = 0;
-		gbc.gridy = 1;
-		north.add(radion1, gbc);
-
-		gbc.gridx = 1;
-		gbc.gridy = 1;
-		north.add(radion2, gbc);
-
-		gbc.gridx = 2;
-		gbc.gridy = 1;
-		north.add(radion3, gbc);
-
 		group.add(radion1);
 		group.add(radion2);
 		group.add(radion3);
+		
+		gbc.gridx = 0;
+		gbc.gridy = 3;
+		gbc.gridwidth = 6;
+		pane.add(new JLabel("Label File Extension Name:"), gbc);
+		
+		gbc.gridx = 6;
+		gbc.gridy = 3;
+		gbc.gridwidth = 1;
+		pane.add(radion1, gbc);
 
+		gbc.gridx = 7;
+		pane.add(radion2, gbc);
+
+		gbc.gridx = 8;
+		pane.add(radion3, gbc);
+
+		
 		onlyGenTrainAndValSet = new JCheckBox("only generate Train and Validate Set");
-		GridBagConstraints gbc_checkBox = new GridBagConstraints();
-		gbc_checkBox.anchor = GridBagConstraints.EAST;
-		gbc_checkBox.gridwidth = 4;
-		gbc_checkBox.gridx = 4;
-		gbc_checkBox.gridy = 1;
-		north.add(onlyGenTrainAndValSet, gbc_checkBox);
-
-		JPanel sourth = new JPanel();
-		getContentPane().add(sourth, BorderLayout.SOUTH);
-
+		gbc.gridx = 0;
+		gbc.gridy = 4;
+		gbc.gridwidth = 9;
+		pane.add(onlyGenTrainAndValSet, gbc);
+		
 		lblStatus = new JLabel("0");
 		lblStatus.setEnabled(false);
-		sourth.add(lblStatus);
+		gbc.gridx = 0;
+		gbc.gridwidth = 6;
+		gbc.gridy = 5;
+		pane.add(lblStatus, gbc);
+		
+		btnConvert = new JButton("Convert");
+		btnConvert.setEnabled(false);
+		gbc.gridx = 6;
+		gbc.gridwidth = 1;
+		gbc.gridy = 5;
+		pane.add(btnConvert, gbc);
+		
 		pack();
 		setResizable(false);
 

@@ -1,5 +1,21 @@
-/**
+/*
  * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package bigdata.cv;
 
@@ -19,9 +35,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.imageio.ImageIO;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -29,6 +46,8 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SpringLayout;
+
+import static bigdata.cv.IconUtil.icon;
 
 /**
  * @author lqian
@@ -47,7 +66,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 
 	// JButton btnOpen;
 
-	JButton btnConvert;
+	JButton corpBtn;
 
 	JLabel lblStatus;
 
@@ -59,9 +78,19 @@ public class CorpDialog extends JDialog implements ItemListener {
 
 	private JButton openTarget;
 
-	public CorpDialog(Frame owner, boolean modal, DataSet dataSet) {
+	LabelConfig labelConfig;
+
+	JComboBox<String> clazzList;
+
+	String selectedOutterClazz;
+
+	JCheckBox innerClazz;
+
+	public CorpDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
 		super(owner, "convert label", modal);
 		this.source = dataSet;
+		this.labelConfig = labelConfig;
+		selectedOutterClazz = labelConfig.clazzNames[0];
 		initialize();
 
 		initializeActions();
@@ -93,7 +122,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 					}
 					int sl = sourceTextField.getText().length();
 					int tl = targetTextField.getText().length();
-					btnConvert.setEnabled(sl > 0 && tl > 0);
+					corpBtn.setEnabled(sl > 0 && tl > 0);
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
@@ -106,7 +135,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 		openTarget.addActionListener(new OpenActionListener(false));
 
 		// raw label file to relative label file with txt extension name
-		btnConvert.addActionListener(new ActionListener() {
+		corpBtn.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -117,6 +146,16 @@ public class CorpDialog extends JDialog implements ItemListener {
 				}
 			}
 		});
+
+		clazzList.addActionListener(new ActionListener() {
+
+			@Override
+			@SuppressWarnings("unchecked")
+			public void actionPerformed(ActionEvent e) {
+				JComboBox<String> cb = (JComboBox<String>) e.getSource();
+				selectedOutterClazz = (String) cb.getSelectedItem();
+			}
+		});
 	}
 
 	void corpInnerBoxes() throws IOException {
@@ -124,14 +163,14 @@ public class CorpDialog extends JDialog implements ItemListener {
 		for (String lf : source.rawLabelFiles) {
 			List<LabeledBoundingBox> boxes = source.readBoundingBoxes(lf);
 			if (boxes.size() > 0) {
-				List<InnerBoxes> innerBoxes = parseInnerBoxes(boxes);
+				List<ObjectBoundingBox> innerBoxes = parseObjectBoxes(boxes);
 				if (innerBoxes.size() > 0) {
 					String name = lf.replace(".label", "");
 					String jpg = lf.replace(".label", ".jpg");
 					BufferedImage image = source.readImage(jpg);
 					if (image != null) {
 						int i = 0;
-						for (InnerBoxes ib : innerBoxes) {
+						for (ObjectBoundingBox ib : innerBoxes) {
 							String tin = String.format("%s_%d.jpg", name, i);
 							int x = ib.outter.x;
 							int y = ib.outter.y;
@@ -140,11 +179,13 @@ public class CorpDialog extends JDialog implements ItemListener {
 							BufferedImage sub = image.getSubimage(x, y, w, h);
 							target.saveImage(tin, sub);
 							
-							String tln = String.format("%s_%d.label", name, i);
-							target.saveRawLabel(tln, w, h, ib.inners);
-							
-							if (counter++ % 10==0) {
-								lblStatus.setText(""+ counter);
+							if (innerClazz.isSelected()) {
+								String tln = String.format("%s_%d.label", name, i);
+								target.saveRawLabel(tln, w, h, ib.inners);
+							}
+
+							if (counter++ % 10 == 0) {
+								lblStatus.setText("" + counter);
 							}
 						}
 					}
@@ -153,31 +194,33 @@ public class CorpDialog extends JDialog implements ItemListener {
 		}
 	}
 
-	List<InnerBoxes> parseInnerBoxes(List<LabeledBoundingBox> boxes) {
-		List<InnerBoxes> innerBoxes = new ArrayList<>();
+	List<ObjectBoundingBox> parseObjectBoxes(List<LabeledBoundingBox> boxes) {
+		List<ObjectBoundingBox> objectBoxes = new ArrayList<>();
 		for (int i = 0; i < boxes.size(); i++) {
 			LabeledBoundingBox outter = boxes.get(i);
-			if (outter.labelName.equals(ImagePanel.clazzNames[0])) {
-				InnerBoxes ib = new InnerBoxes();
+			if (outter.labelName.equals(selectedOutterClazz)) {
+				ObjectBoundingBox ib = new ObjectBoundingBox();
 				ib.outter = outter;
 				ib.inners = new ArrayList<>();
-				for (int j = 0; j < boxes.size(); j++) {
-					if (i != j) {
-						LabeledBoundingBox e = boxes.get(j);
-						if (e.isWithin(ib.outter)) {
-							e.x -= outter.x;
-							e.y -= outter.y;
-							ib.inners.add(e);
+				if (innerClazz.isSelected()) {
+					for (int j = 0; j < boxes.size(); j++) {
+						if (i != j) {
+							LabeledBoundingBox e = boxes.get(j);
+							if (e.isWithin(ib.outter)) {
+								e.x -= outter.x;
+								e.y -= outter.y;
+								ib.inners.add(e);
+							}
 						}
 					}
 				}
-				innerBoxes.add(ib);
+				objectBoxes.add(ib);
 			}
 		}
-		return innerBoxes;
+		return objectBoxes;
 	}
 
-	class InnerBoxes {
+	class ObjectBoundingBox {
 		LabeledBoundingBox outter;
 		List<LabeledBoundingBox> inners;
 	}
@@ -206,7 +249,18 @@ public class CorpDialog extends JDialog implements ItemListener {
 		openTarget = new JButton("...");
 		center.add(openTarget);
 
-		SpringUtilities.makeCompactGrid(center, 2, 3, // rows, cols
+		JLabel l3 = new JLabel("Outter clazz: ");
+		center.add(l3);
+		clazzList = new JComboBox<String>(labelConfig.clazzNames);
+		clazzList.setEditable(false);
+		l3.setLabelFor(clazzList);
+		center.add(clazzList);
+		innerClazz = new JCheckBox("inner boxes");
+//		innerClazz.setToolTipText("checked me include inner boxes");
+		innerClazz.setSelected(true);
+		center.add(innerClazz);
+
+		SpringUtilities.makeCompactGrid(center, 3, 3, // rows, cols
 				6, 6, // initX, initY
 				6, 6); // xPad, yPad
 
@@ -226,12 +280,12 @@ public class CorpDialog extends JDialog implements ItemListener {
 		gbc.gridwidth = 4;
 		south.add(lblStatus, gbc);
 
-		btnConvert = new JButton("Convert");
-		btnConvert.setEnabled(false);
+		corpBtn = new JButton("Corp");
+		corpBtn.setEnabled(false);
 		gbc.anchor = GridBagConstraints.EAST;
 		gbc.gridwidth = 1;
 		gbc.gridx = 4;
-		south.add(btnConvert, gbc);
+		south.add(corpBtn, gbc);
 
 		pack();
 		setResizable(false);
@@ -247,5 +301,4 @@ public class CorpDialog extends JDialog implements ItemListener {
 		JRadioButton s = (JRadioButton) e.getSource();
 		suffix = s.getText();
 	}
-
 }

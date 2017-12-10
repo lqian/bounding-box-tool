@@ -19,29 +19,22 @@
  */
 package bigdata.cv;
 
-import java.awt.image.BufferedImage;
+import javax.swing.ImageIcon;
 
 /**
- * 
  * @author qian xiafei
  *
  */
-public abstract class ImagePanelListener {
+public class IconUtil {
 	
-	/**
-	 * post a the event after scaled image
-	 */
-	public abstract void postScaled();
-	
-	public abstract void postLabelFileSave(boolean update);
-	
-	public abstract void postCorp(BufferedImage image);
-	
-	public abstract void postSelectedImage(BufferedImage image);
-	
-	public abstract void postOpen();
-	
-	public abstract void postChange(BufferedImage image);
+	public static  ImageIcon icon(String name, String description) {
+		java.net.URL imgURL = IconUtil.class.getClass().getResource("/icons/" + name);
+		if (imgURL != null) {
+			return new ImageIcon(imgURL, description);
+		} else {
+			System.err.println("Couldn't find file: " + name);
+			return null;
+		}
+	}
 
-	public abstract void postChangeLabel(int selectBoundingBoxIndex, LabeledBoundingBox bb)  ;
 }

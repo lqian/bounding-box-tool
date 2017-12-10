@@ -1,5 +1,25 @@
+/*
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package bigdata.cv;
 
+import static bigdata.cv.IconUtil.icon;
 import static javax.swing.JOptionPane.YES_NO_OPTION;
 import static javax.swing.JOptionPane.YES_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
@@ -17,8 +37,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.BoxLayout;
@@ -28,7 +49,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -44,8 +64,9 @@ import javax.swing.table.DefaultTableModel;
 @SuppressWarnings("serial")
 public class MainWindow implements WindowListener {
 
-	private JFrame frame;
-	private JTextField txtDirectory;
+	LabelConfig labelConfig;
+
+	JFrame frame;
 
 	int totalFile;
 	int totalBoudingBoxLabels;
@@ -59,65 +80,73 @@ public class MainWindow implements WindowListener {
 	JLabel valTotalImage;
 
 	JLabel valTotalLabel;
-	
+
 	JLabel lblScalePercent;
-	
-	JLabel lblResolution ;
+
+	JLabel lblResolution;
 
 	int currentImageIndex = -1;
 
 	ImagePanel imagePanel = new ImagePanel();
-	MonitorPanel  monitorPanel = new MonitorPanel();
-	
+	MonitorPanel monitorPanel = new MonitorPanel();
+
 	JMenuBar menuBar = new JMenuBar();
-	
+
 	JMenu fileMenu = new JMenu("File");
-	
+
 	JMenu editMenu = new JMenu("Edit");
-	
+
 	JMenu utilMenu = new JMenu("Utility");
-	
+
 	JMenu aboutMenu = new JMenu("About");
-	
-	 JButton btnFirst;
-	 JButton btnPreviouse;
-	 JButton btnNext;
-	 JButton btnAutoNext;
-	 JButton btnLast;
-	JButton btnFind;
-	 JLabel lblFileName;
+
+	JButton btnFirst;
+	JButton btnPreviouse;
+	JButton btnNext;
+	JButton btnAutoNext;
+	JButton btnLast;
+	JLabel lblFileName;
 	JLabel lblCurrentImageIndex;
 
 	JTable tblBoudingBox;
 	DefaultTableModel tableModel;
 	private JButton btnCleanBoundingBox;
 	private JButton btnRemoveBoundingBox;
-	
+
 	DataSet dataSet;
 
 	JButton moveLeft = new JButton("Move Left");
 	JButton moveRight = new JButton("Move Right");
 	JButton moveUp = new JButton("Move Up");
 	JButton moveDown = new JButton("Move Down");
-	
+
 	JButton expandLeft = new JButton("Expand Left");
 	JButton expandRight = new JButton("Expand Right");
 	JButton expandTop = new JButton("Expand Top");
 	JButton expandBottom = new JButton("Expand Bottom");
-	
+
 	JButton shrinkLeft = new JButton("Shrink Left");
 	JButton shrinkRight = new JButton("Shrink Right");
 	JButton shrinkTop = new JButton("Shrink Top");
 	JButton shinkBottom = new JButton("Shrink Bottom");
-	
-	private JMenuItem openMenu;
-	private JMenuItem deleteMenu;
-	private JMenuItem exitMenu;
-	private JMenuItem convertMenu;
-	private JMenuItem corpMenu;
-	private JMenuItem findByNameMenu;
-	private JMenuItem findByClassMenu;
-	
+
+	private JButton btnOpen;
+	private JButton btnDelete;
+	private JButton btnConvert;
+	private JButton btnFindByName;
+	private JButton btnFilter;
+	private JButton btnSave;
+	private JButton btnCorp;
+	private JButton btnAbout;
+
+	boolean filtered = false;
+
+	Set<String> filterClazz = new HashSet<>();
+
+	FilterDialog filterDialog;
+
+	private JButton btnAutoForward;
+
 	/**
 	 * Launch the application.
 	 */
@@ -138,21 +167,23 @@ public class MainWindow implements WindowListener {
 
 	/**
 	 * Create the application.
+	 * 
+	 * @throws IOException
 	 */
-	public MainWindow() {
+	public MainWindow() throws IOException {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			// UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
 		} catch (Exception e) {
+			System.out.println(e);
 		}
-
+		labelConfig = new LabelConfig();
 		initialize();
 		initActions();
 	}
 
 	void initActions() {
-
-		openMenu.addActionListener(new OpenFileAction());
+		imagePanel.labelConfig = labelConfig;
 		imagePanel.listener = new ImagePanelListener() {
 
 			@Override
@@ -166,15 +197,16 @@ public class MainWindow implements WindowListener {
 
 			@Override
 			public void postScaled() {
-				String text = String.format("%.0f", 100 / imagePanel.scaleFactor); 
+				String text = String.format("%.0f", 100 / imagePanel.scaleFactor);
 				lblScalePercent.setText(text + "%");
-				
+
 			}
 
 			@Override
 			public void postCorp(BufferedImage image) {
 				monitorPanel.setImage(image);
 				tblBoudingBox.getSelectionModel().clearSelection();
+				btnSave.setEnabled(true);
 			}
 
 			@Override
@@ -185,6 +217,7 @@ public class MainWindow implements WindowListener {
 			@Override
 			public void postOpen() {
 				lblResolution.setText(String.format("%dX%d", imagePanel.imageWidth, imagePanel.imageHeight));
+				btnSave.setEnabled(false);
 			}
 
 			@Override
@@ -197,7 +230,7 @@ public class MainWindow implements WindowListener {
 				tableModel.setValueAt(bb.boundingBoxString(), row, 1);
 			}
 		};
-		
+
 		tblBoudingBox.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
 			@Override
@@ -247,23 +280,27 @@ public class MainWindow implements WindowListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (currentImageIndex < imageFiles.size() - 1) {
-					imagePanel.load(imageFiles.get(++currentImageIndex));
-					lblFileName.setText(imageFiles.get(currentImageIndex));
-					monitorPanel.clearImage();
-					lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
+					if (filterClazz.size() > 0) {
+						try {
+							filterNext();
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+					} else {
+						++currentImageIndex;
+					}
+					showCurrImage();
 				}
 			}
 		});
-		
-		btnAutoNext.addActionListener(new ActionListener() {
+
+		btnAutoForward.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				monitorPanel.clearImage();
-				autoLocateImage() ;
-				lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
+				autoLocateImage();
 			}
-			
 		});
 
 		btnPreviouse.addActionListener(new ActionListener() {
@@ -272,9 +309,17 @@ public class MainWindow implements WindowListener {
 			public void actionPerformed(ActionEvent e) {
 				monitorPanel.clearImage();
 				if (currentImageIndex > 0) {
-					imagePanel.load(imageFiles.get(--currentImageIndex));
-					lblFileName.setText(imageFiles.get(currentImageIndex));
-					lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
+					if (filterClazz.isEmpty()) {
+						--currentImageIndex;
+					}
+					else {
+						try {
+							filterPre();
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+					}
+					showCurrImage();
 				}
 			}
 		});
@@ -289,14 +334,14 @@ public class MainWindow implements WindowListener {
 				lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
 			}
 		});
-		
+
 		ActionListener findActionListener = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String image = JOptionPane.showInputDialog("image file name:");
 				if (image != null) {
-					for (int i=0; i < imageFiles.size(); i++) {
+					for (int i = 0; i < imageFiles.size(); i++) {
 						if (image.equals(imageFiles.get(i))) {
 							currentImageIndex = i;
 							imagePanel.load(imageFiles.get(currentImageIndex));
@@ -307,21 +352,29 @@ public class MainWindow implements WindowListener {
 				}
 			}
 		};
-		btnFind.addActionListener(findActionListener);
-		findByNameMenu.addActionListener(findActionListener);
-		
-		deleteMenu.addActionListener(new ActionListener() {
+
+		btnFindByName.addActionListener(findActionListener);
+
+		btnSave.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				imagePanel.saveLabelsToFile();
+			}
+		});
+
+		btnDelete.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				
+
 				String imageFile = imageFiles.get(currentImageIndex);
 				String labelFile = "";
 				int i = imageFile.lastIndexOf(".");
 				if (i != -1) {
 					labelFile = imageFile.substring(0, i) + ".label";
 				}
-				String msg = String.format("are you sure to delete %s and its label file:%s if exsited", imageFile, labelFile);
+				String msg = String.format("are you sure to delete %s and its label file:%s if exsited", imageFile,
+						labelFile);
 				int ret = showConfirmDialog(frame, msg, "confirm delete image", YES_NO_OPTION);
 				if (ret == YES_OPTION) {
 					deleteCurrentFiles();
@@ -329,32 +382,43 @@ public class MainWindow implements WindowListener {
 				}
 			}
 		});
-		
+
 		ActionListener convertActionListener = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				ConvertDialog dialog = new ConvertDialog(frame, true, dataSet);
+				ConvertDialog dialog = new ConvertDialog(frame, true, dataSet, labelConfig);
 				dialog.setVisible(true);
 				dialog.setAlwaysOnTop(true);
 				dialog.setLocationRelativeTo(frame);
 			}
-			
+
 		};
-		convertMenu.addActionListener(convertActionListener);
-		
+		btnConvert.addActionListener(convertActionListener);
+
 		ActionListener corpActionListener = new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				CorpDialog dialog = new CorpDialog(frame, true, dataSet);
+				CorpDialog dialog = new CorpDialog(frame, true, dataSet, labelConfig);
 				dialog.setVisible(true);
 				dialog.setAlwaysOnTop(true);
 				dialog.setLocationRelativeTo(frame);
 			}
 		};
-		
-		corpMenu.addActionListener(corpActionListener);
+
+		btnCorp.addActionListener(corpActionListener);
+
+		btnFilter.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				filterDialog.setVisible(true);
+				filterDialog.setAlwaysOnTop(true);
+				filterDialog.setLocationRelativeTo(frame);
+			}
+
+		});
 	}
 
 	void deleteCurrentFiles() {
@@ -370,7 +434,7 @@ public class MainWindow implements WindowListener {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		int maxIndex = imageFiles.size() - 1;
 		if (currentImageIndex > maxIndex) {
 			currentImageIndex = maxIndex;
@@ -380,66 +444,57 @@ public class MainWindow implements WindowListener {
 		valTotalImage.setText("" + imageFiles.size());
 	}
 
-	/**
-	 * Initialize the contents of the frame.
-	 */
-	void initializeMenus() {
-		frame.setJMenuBar(menuBar);
-		
-		menuBar.add(fileMenu);
-		openMenu = new JMenuItem("Open Dataset");
-		fileMenu.add(openMenu);
-		deleteMenu = new JMenuItem("Del Image");
-		fileMenu.add(deleteMenu);
-		deleteMenu.setEnabled(false);
-		fileMenu.addSeparator();
-		exitMenu = new JMenuItem("Exit");
-		fileMenu.add(exitMenu);
-		
-//		menuBar.add(editMenu);
-		
-		menuBar.add(utilMenu);
-		convertMenu = new JMenuItem("Convert Coordinates");
-		utilMenu.add(convertMenu);
-		corpMenu = new JMenuItem("Corp Vehicle Relative Coordinates");
-		utilMenu.add(corpMenu);
-		
-		findByNameMenu = new JMenuItem("Find By Name");
-		utilMenu.add(findByNameMenu);
-		
-		findByClassMenu = new JMenuItem("Find By Class");
-		utilMenu.add(findByClassMenu);
-		
-		menuBar.add(aboutMenu);
-	}
-	
 	private void initialize() {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new BorderLayout(10, 10));
-		
-		
-		initializeMenus();
 
-//		JToolBar toolBar = new JToolBar();
-//		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
-//		btnOpen = new JButton("Open DataSet");
-//		btnOpen.setAction(new OpenFileAction());
-//		toolBar.add(btnOpen);
+		JToolBar toolBar = new JToolBar();
+		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
+		btnOpen = new JButton(icon("open.gif", "open dataset"));
+		btnOpen.setToolTipText("open dataset");
+		btnOpen.addActionListener(new OpenFileAction());
+		toolBar.add(btnOpen);
 
-//		btnDelPicture = new JButton();
-//		toolBar.add(btnDelPicture);
-//		btnDelPicture.setText("Delete Picutre");
-//		btnDelPicture.setEnabled(false);
+		btnSave = new JButton(icon("save.gif", "save labeled bounding box to file for current image"));
+		btnSave.setToolTipText("save labeled bounding box to file for current image");
+		btnSave.setEnabled(false);
+		toolBar.add(btnSave);
 
-//		btnConvert = new JButton("Convert");
-//		toolBar.add(btnConvert);
+		btnDelete = new JButton(icon("delete.gif", "delete current image and label file"));
+		toolBar.add(btnDelete);
+		btnDelete.setEnabled(false);
+		btnDelete.setToolTipText("delete current image and label file");
 
-		JButton btnOpenFile = new JButton("Open");
-		btnOpenFile.setAction(new OpenFileAction(txtDirectory));
-		btnOpenFile.setText("Open DataSet");
-		btnOpenFile.setToolTipText("click the button open image dataset directory");
+		toolBar.addSeparator();
+		btnConvert = new JButton(icon("convert.gif", "convert the labeled bounding box file to annother format"));
+		toolBar.add(btnConvert);
+		btnConvert.setToolTipText("convert the labeled bounding box file to annother format");
+
+		btnCorp = new JButton(icon("corp.gif", "corp inner labeld bounding fox within vehicle box"));
+		btnCorp.setToolTipText("corp inner labeld bounding fox within vehicle box");
+		toolBar.add(btnCorp);
+
+		btnFindByName = new JButton(icon("findByName.gif", "find image via its name"));
+		btnFindByName.setToolTipText("find image via its name");
+		toolBar.add(btnFindByName);
+
+		btnFilter = new JButton(icon("filter.gif", "filter one or more label class and export to annother dataset"));
+		btnFilter.setToolTipText("filter one or more label class and export to annother dataset");
+		toolBar.add(btnFilter);
+
+		btnAutoForward = new JButton(icon("auto_forward.gif", "auto forward to next image without bounding box"));
+		btnAutoForward.setToolTipText("auto forward to next image without bounding box");
+		toolBar.add(btnAutoForward);
+		// btnClearFilter = new JButton(icon("clear_filter.gif", "clear current
+		// label class filter"));
+		// btnClearFilter.setToolTipText("clear current label class filter");
+		// toolBar.add(btnClearFilter);
+
+		toolBar.addSeparator();
+		btnAbout = new JButton(icon("about.gif", ""));
+		toolBar.add(btnAbout);
 
 		btnRemoveBoundingBox = new JButton("Remove");
 		btnCleanBoundingBox = new JButton("Clear All");
@@ -464,17 +519,17 @@ public class MainWindow implements WindowListener {
 		toolBoxPanel.add(centerToolBox, BorderLayout.CENTER);
 		GridBagLayout gblCenterToolBox = new GridBagLayout();
 		centerToolBox.setLayout(gblCenterToolBox);
-		
-		gblCenterToolBox.columnWidths = new int[]{432, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		gblCenterToolBox.rowHeights = new int[]{22, 0, 0};
-		gblCenterToolBox.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-				 0.0, 0.0, 0.0, Double.MIN_VALUE};
-		gblCenterToolBox.rowWeights = new double[]{0.0, 0.0, Double.MIN_VALUE};
-		
+
+		gblCenterToolBox.columnWidths = new int[] { 432, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		gblCenterToolBox.rowHeights = new int[] { 22, 0, 0 };
+		gblCenterToolBox.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+				Double.MIN_VALUE };
+		gblCenterToolBox.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
+
 		tblBoudingBox = new JTable(tableModel);
 		tblBoudingBox.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblBoudingBox.getColumnModel().getColumn(0).setPreferredWidth(5);
-		
+
 		JScrollPane scrollPane = new JScrollPane(tblBoudingBox);
 		GridBagConstraints gbcScrollPane = new GridBagConstraints();
 		gbcScrollPane.anchor = GridBagConstraints.SOUTH;
@@ -482,7 +537,7 @@ public class MainWindow implements WindowListener {
 		gbcScrollPane.gridx = 0;
 		gbcScrollPane.gridy = 0;
 		centerToolBox.add(scrollPane, gbcScrollPane);
-		
+
 		JPanel corpPanel = new JPanel();
 		GridBagConstraints gbcCorpPanel = new GridBagConstraints();
 		gbcCorpPanel.anchor = GridBagConstraints.NORTH;
@@ -491,31 +546,8 @@ public class MainWindow implements WindowListener {
 		gbcCorpPanel.gridy = 1;
 		gbcCorpPanel.gridheight = 1;
 		centerToolBox.add(monitorPanel, gbcCorpPanel);
-		
+
 		corpPanel.setLayout(new BorderLayout(10, 10));
-		
-//		JPanel corpNorth = new JPanel();
-//		corpNorth.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
-//		corpNorth.add(moveUp);
-//		corpNorth.add(expandTop);
-//		corpNorth.add(shrinkTop);
-//
-//		JPanel corpSouth = new JPanel(); 
-//		corpSouth.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
-//		corpSouth.add(moveDown);
-//		corpSouth.add(expandBottom);
-//		corpSouth.add(shinkBottom);
-//		
-//		JPanel corpWest = new JPanel();
-//		corpWest.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
-//		corpWest.add(moveLeft);
-//		corpWest.add(expandLeft);
-//		corpWest.add(shrinkLeft);
-//		
-//		corpPanel.add(corpNorth, BorderLayout.NORTH);
-//		corpPanel.add(corpSouth, BorderLayout.SOUTH);
-//		corpPanel.add(corpWest, BorderLayout.WEST);
-//		corpPanel.add(monitorPanel, BorderLayout.CENTER);
 
 		JPanel buttonPane = new JPanel();
 		buttonPane.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
@@ -548,15 +580,9 @@ public class MainWindow implements WindowListener {
 
 		btnNext = new JButton(">>");
 		navPanel.add(btnNext);
-		
-		btnAutoNext = new JButton("->>");
-		navPanel.add(btnAutoNext);
 
 		btnLast = new JButton(">|");
 		navPanel.add(btnLast);
-		
-		btnFind = new JButton("??");
-		navPanel.add(btnFind);
 
 		JLabel lblTotalImage = new JLabel("Total Image:");
 		statusPanel.add(lblTotalImage);
@@ -572,16 +598,18 @@ public class MainWindow implements WindowListener {
 
 		lblFileName = new JLabel("");
 		statusPanel.add(lblFileName);
-		
+
 		lblCurrentImageIndex = new JLabel("");
 		statusPanel.add(lblCurrentImageIndex);
-		
+
 		this.lblScalePercent = new JLabel("");
 		statusPanel.add(lblScalePercent);
-		
+
 		lblResolution = new JLabel("");
 		statusPanel.add(lblResolution);
-		
+
+		filterDialog = new FilterDialog(MainWindow.this, true);
+
 		frame.pack();
 	}
 
@@ -592,12 +620,6 @@ public class MainWindow implements WindowListener {
 		JTextField txtDirectory;
 
 		public OpenFileAction() {
-			putValue(NAME, "Open DateSet");
-			putValue(SHORT_DESCRIPTION, "open a directory which contain image dataset");
-		}
-
-		public OpenFileAction(JTextField txtDirectory) {
-			this.txtDirectory = txtDirectory;
 			putValue(NAME, "Open DateSet");
 			putValue(SHORT_DESCRIPTION, "open a directory which contain image dataset");
 		}
@@ -617,7 +639,7 @@ public class MainWindow implements WindowListener {
 			}
 		}
 	}
-	
+
 	private void autoLocateImage() {
 		currentImageIndex = 0;
 		if (labelFiles.size() > 0) {
@@ -630,12 +652,52 @@ public class MainWindow implements WindowListener {
 				}
 			}
 		}
-		if (currentImageIndex >= imageFiles.size()) 
+		showCurrImage();
+	}
+
+	private void showCurrImage() {
+		if (currentImageIndex >= imageFiles.size())
 			currentImageIndex = 0;
 		imagePanel.load(imageFiles.get(currentImageIndex));
 		lblFileName.setText(imageFiles.get(currentImageIndex));
+		lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
 	}
-	
+
+	void filterNext() throws IOException {
+		boolean found = false;
+		for (; !found && currentImageIndex < imageFiles.size(); currentImageIndex++) {
+			String imageFile = imageFiles.get(currentImageIndex);
+			int i = imageFile.lastIndexOf(".");
+			String labelFile = imageFile.substring(0, i) + ".label";
+			List<LabeledBoundingBox> boxes = dataSet.readBoundingBoxes(labelFile);
+			if (boxes != null) {
+				for (LabeledBoundingBox box : boxes) {
+					if (filterClazz.contains(box.labelName)) {
+						found = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	void filterPre() throws IOException {
+		boolean found = false;
+		for (; !found && currentImageIndex > 0; currentImageIndex--) {
+			String imageFile = imageFiles.get(currentImageIndex);
+			int i = imageFile.lastIndexOf(".");
+			String labelFile = imageFile.substring(0, i) + ".label";
+			List<LabeledBoundingBox> boxes = dataSet.readBoundingBoxes(labelFile);
+			if (boxes != null) {
+				for (LabeledBoundingBox box : boxes) {
+					if (filterClazz.contains(box.labelName)) {
+						found = true;
+						break;
+					}
+				}
+			}
+		}
+	}
 
 	class LoadImageThread extends Thread {
 		Path path;
@@ -650,7 +712,7 @@ public class MainWindow implements WindowListener {
 				dataSet = new DataSet(path);
 				totalFile = dataSet.imageFiles.size();
 				imageFiles = dataSet.imageFiles;
-				labelFiles =  dataSet.rawLabelFiles;
+				labelFiles = dataSet.rawLabelFiles;
 				valTotalImage.setText(String.valueOf(totalFile));
 				totalBoudingBoxLabels = dataSet.rawLabelFiles.size();
 				valTotalLabel.setText(String.valueOf(totalBoudingBoxLabels));
@@ -658,8 +720,7 @@ public class MainWindow implements WindowListener {
 				// locate the first un-labeled image
 				imagePanel.dataSet = dataSet;
 				autoLocateImage();
-//				btnDelPicture.setEnabled(true);
-				deleteMenu.setEnabled(true);
+				btnDelete.setEnabled(true);
 				imagePanel.enabled = true;
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -669,7 +730,7 @@ public class MainWindow implements WindowListener {
 
 	@Override
 	public void windowOpened(WindowEvent e) {
-		
+
 	}
 
 	@Override
@@ -681,12 +742,12 @@ public class MainWindow implements WindowListener {
 
 	@Override
 	public void windowClosed(WindowEvent e) {
-		
+
 	}
 
 	@Override
 	public void windowIconified(WindowEvent e) {
-		
+
 	}
 
 	@Override
@@ -695,10 +756,23 @@ public class MainWindow implements WindowListener {
 
 	@Override
 	public void windowActivated(WindowEvent e) {
-		
+
 	}
 
 	@Override
 	public void windowDeactivated(WindowEvent e) {
+	}
+
+	public void clearFilter() {
+		filtered = false;
+		this.filterClazz.clear();
+	}
+
+	public void addClazzFilter(String clazz) {
+		filterClazz.add(clazz);
+	}
+
+	public void removeClazzFilter(String clazz) {
+		filterClazz.remove(clazz);
 	}
 }

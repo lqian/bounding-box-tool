@@ -1,5 +1,21 @@
-/**
+/*
  * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package bigdata.cv;
 
@@ -20,7 +36,6 @@ import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -46,10 +61,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	static final float MAX_SCALE_FACTOR = 4;
 
 	static final float MIN_SCALE_FACTOR = 0.25f;
-
-	public final static String[] clazzNames = { "车辆", "驾驶员", "年检标", "遮阳板", "车牌", "纸巾盒", "挂饰", "摆件", "安全带", "手机", "标志牌", "危险品", "黄标", "实习标", "临牌" };
-	public final static String[] clazzNames_Eng = { "vehicle", "driver", "pvds", "zyb", "vehicle_plate", "tissue_box", "gs", "bj", "safety_belt", "phone", "mark_plate", "carriage_of_dangerous_goods",
-			"yellow_label", "Standard_Practice", "temporary_plate" };
+	
 	DefaultTableModel tableModel;
 
 	DataSet dataSet;
@@ -86,6 +98,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	ImagePanelListener  listener;
 	
 	boolean enabled = false;
+
+	LabelConfig labelConfig;
 
 	public ImagePanel() {
 		super();
@@ -178,7 +192,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	public String showLabelDialog() {
 		String label = (String) JOptionPane.showInputDialog(this, "select one label:", "", JOptionPane.PLAIN_MESSAGE,
-				null, clazzNames, null);
+				null, labelConfig.clazzNames, null);
 
 		return label;
 	}
@@ -226,7 +240,11 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public void paint(Graphics g) {
-		if (!enabled) return;
+		if (!enabled) {
+			super.paint(g);
+			return;
+		}
+		
 		int pw = this.getWidth();
 		int ph = this.getHeight();
 		g.setColor(this.getBackground());
