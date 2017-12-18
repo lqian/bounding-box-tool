@@ -30,7 +30,8 @@ import java.util.Map;
 public class LabelConfig {
 
 	String[] clazzNames;
-	Map<String, String> map = new HashMap<>();
+	Map<String, String> aliasMap = new HashMap<>();
+	Map<String, String> idsMap = new HashMap<>();
 
 	public LabelConfig() throws IOException {
 		InputStream is = this.getClass().getResourceAsStream("/label.names");
@@ -41,7 +42,7 @@ public class LabelConfig {
 				String tokens[] = line.split("=", 2);
 				if (tokens.length == 2) {
 					names.add(tokens[0]);
-					map.put(tokens[0], tokens[1]);
+					aliasMap.put(tokens[0], tokens[1]);
 				} else {
 					System.out.println("invalid class name: " + line);
 				}
@@ -51,9 +52,16 @@ public class LabelConfig {
 		}
 
 		clazzNames = names.toArray(new String[names.size()]);
+		for (int i=0; i < clazzNames.length; i++) {
+			idsMap.put(clazzNames[i], "" + i);
+		}
 	}
 
 	public String getAliases(String name) {
-		return map.get(name);
+		return aliasMap.get(name);
+	}
+	
+	public String getId(String name) {
+		return idsMap.get(name);
 	}
 }

@@ -250,10 +250,11 @@ public class ConvertDialog extends JDialog implements ItemListener {
 					double y = ((bb.y * 2 + bb.h) / 2 - 1) * dh;
 					double w = bb.w * dw;
 					double h = bb.h * dh;
-					
-					writer.write(String.format("%d %f %f %f %f", labelConfig.getAliases(bb.labelName), x, y, w, h));
-					writer.newLine();
-					c++;
+					if (selectedClazz.contains(bb.labelName)) {
+						writer.write(String.format("%s %f %f %f %f", labelConfig.getId(bb.labelName), x, y, w, h));
+						writer.newLine();
+						c++;
+					}
 				}
 			}
 			reader.close();
