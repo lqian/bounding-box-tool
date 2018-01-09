@@ -79,9 +79,10 @@ public class FilterDialog extends JDialog {
 		pane.add(close, gbc);
 		
 		close.addActionListener(new ActionListener() {
-
+			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				mainWindow.clearFilter();
 				for (JCheckBox cb: clazzes) {
 					if (cb.isSelected())
 						mainWindow.addClazzFilter(cb.getText());

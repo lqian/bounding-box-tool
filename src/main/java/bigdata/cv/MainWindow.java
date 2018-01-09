@@ -134,6 +134,7 @@ public class MainWindow implements WindowListener {
 	private JButton btnDelete;
 	private JButton btnConvert;
 	private JButton btnFindByName;
+	private JButton btnFindByClazz;
 	private JButton btnFilter;
 	private JButton btnSave;
 	private JButton btnCorp;
@@ -298,7 +299,6 @@ public class MainWindow implements WindowListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				monitorPanel.clearImage();
 				autoLocateImage();
 			}
 		});
@@ -311,8 +311,7 @@ public class MainWindow implements WindowListener {
 				if (currentImageIndex > 0) {
 					if (filterClazz.isEmpty()) {
 						--currentImageIndex;
-					}
-					else {
+					} else {
 						try {
 							filterPre();
 						} catch (IOException e1) {
@@ -354,6 +353,19 @@ public class MainWindow implements WindowListener {
 		};
 
 		btnFindByName.addActionListener(findActionListener);
+
+		btnFindByClazz.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (filterClazz.isEmpty()) {
+					DialogUtil.showWarningMsg("does not select any clazz in filter dialog");
+				} else {
+					findImageByClazz();
+				}
+			}
+
+		});
 
 		btnSave.addActionListener(new ActionListener() {
 			@Override
@@ -479,6 +491,10 @@ public class MainWindow implements WindowListener {
 		btnFindByName = new JButton(icon("findByName.gif", "find image via its name"));
 		btnFindByName.setToolTipText("find image via its name");
 		toolBar.add(btnFindByName);
+
+		btnFindByClazz = new JButton(icon("findByClazz.gif", "find image via an given clazz"));
+		btnFindByClazz.setToolTipText("find image via an given clazz");
+//		toolBar.add(btnFindByClazz);
 
 		btnFilter = new JButton(icon("filter.gif", "filter one or more label class and export to annother dataset"));
 		btnFilter.setToolTipText("filter one or more label class and export to annother dataset");
@@ -655,9 +671,41 @@ public class MainWindow implements WindowListener {
 		showCurrImage();
 	}
 
+	void findImageByClazz() {
+		if (labelFiles.size() > 0) {
+			try {
+				boolean found = false;
+				for (; !found && currentImageIndex < imageFiles.size(); currentImageIndex++) {
+					String imageFile = imageFiles.get(currentImageIndex);
+					int i = imageFile.lastIndexOf(".");
+					String labelFile = imageFile.substring(0, i) + ".label";
+
+					List<LabeledBoundingBox> lbbs = this.dataSet.readBoundingBoxes(labelFile);
+					for (LabeledBoundingBox lbb : lbbs) {
+						found = filterClazz.contains(lbb.labelName);
+						if (found)
+							break;
+					}
+					if (found)
+						break;
+				}
+				if (found) {
+					showCurrImage();
+				}
+				else {
+					DialogUtil.showInfoMsg("find clazz error, see track log");
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				DialogUtil.showWarningMsg("find clazz error, see track log");
+			}
+		}
+	}
+
 	private void showCurrImage() {
 		if (currentImageIndex >= imageFiles.size())
 			currentImageIndex = 0;
+		monitorPanel.clearImage();
 		imagePanel.load(imageFiles.get(currentImageIndex));
 		lblFileName.setText(imageFiles.get(currentImageIndex));
 		lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
@@ -665,6 +713,7 @@ public class MainWindow implements WindowListener {
 
 	void filterNext() throws IOException {
 		boolean found = false;
+		currentImageIndex++;
 		for (; !found && currentImageIndex < imageFiles.size(); currentImageIndex++) {
 			String imageFile = imageFiles.get(currentImageIndex);
 			int i = imageFile.lastIndexOf(".");
@@ -678,11 +727,14 @@ public class MainWindow implements WindowListener {
 					}
 				}
 			}
+			if (found) break;
 		}
 	}
 
 	void filterPre() throws IOException {
 		boolean found = false;
+		if(currentImageIndex> 0)
+			currentImageIndex--;
 		for (; !found && currentImageIndex > 0; currentImageIndex--) {
 			String imageFile = imageFiles.get(currentImageIndex);
 			int i = imageFile.lastIndexOf(".");
@@ -696,6 +748,8 @@ public class MainWindow implements WindowListener {
 					}
 				}
 			}
+			
+			if (found) break;
 		}
 	}
 

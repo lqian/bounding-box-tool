@@ -23,7 +23,6 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -43,7 +42,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
-import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.table.DefaultTableModel;
@@ -142,7 +140,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		int i = imageFile.lastIndexOf(".");
 		if (i == -1) {
 			String msg = "not found extension name for file:\n" + imageFile;
-			showWarningMsg(msg);
+			DialogUtil.showWarningMsg(msg);
 		} else {
 			rawLabelFile = imageFile.substring(0, i) + ".label";
 			try {
@@ -156,17 +154,9 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				image = null;
 				imageWidth = -1;
 				imageHeight = -1;
-				showWarningMsg("cannot read image content for file:\n" + imageFile);
+				DialogUtil.showWarningMsg("cannot read image content for file:\n" + imageFile);
 			}
 		}
-	}
-
-	public void showWarningMsg(String text) {
-		Toolkit.getDefaultToolkit().beep();
-		JOptionPane optionPane = new JOptionPane(text, JOptionPane.WARNING_MESSAGE);
-		JDialog dialog = optionPane.createDialog("Warning!");
-		dialog.setAlwaysOnTop(true);
-		dialog.setVisible(true);
 	}
 
 	public void loadExistedBoundingBox() {
@@ -185,7 +175,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				renderTableModel();
 			} catch (IOException e) {
 				e.printStackTrace();
-				showWarningMsg("cannot read label file:\n" + rawLabelFile);
+				DialogUtil.showWarningMsg("cannot read label file:\n" + rawLabelFile);
 			}
 		}
 	}
@@ -216,7 +206,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				listener.postLabelFileSave(update);
 			} catch (IOException e) {
 				e.printStackTrace();
-				showWarningMsg("cannot write label file:\n" + rawLabelFile);
+				DialogUtil.showWarningMsg("cannot write label file:\n" + rawLabelFile);
 			}
 		}
 	}
