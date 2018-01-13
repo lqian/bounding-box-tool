@@ -38,7 +38,7 @@ public class LabeledBoundingBox {
 		LabeledBoundingBox bb = new LabeledBoundingBox();
 		bb.labelName = labelName;
 		bb.x = (int) floor(((x1 < x2 ? x1 : x2) - showX + 1) * scaleFactor);
-		bb.y = (int) floor(((y1 < y2 ? y1 : y2)  - showY + 1) * scaleFactor);
+		bb.y = (int) floor(((y1 < y2 ? y1 : y2) - showY + 1) * scaleFactor);
 		bb.w = (int) floor(abs(x1 - x2) * scaleFactor) + 1;
 		bb.h = (int) floor(abs(y1 - y2) * scaleFactor) + 1;
 		return bb;
@@ -48,7 +48,7 @@ public class LabeledBoundingBox {
 	public String toString() {
 		return String.format("%s,%d,%d,%d,%d", labelName, x, y, w, h);
 	}
-	
+
 	public String boundingBoxString() {
 		return String.format("%d,%d,%d,%d", x, y, w, h);
 	}
@@ -69,9 +69,10 @@ public class LabeledBoundingBox {
 	}
 
 	public boolean isWithin(LabeledBoundingBox other) {
-		return x >= other.x 
-				&& y >= other.y 
-				&& x + w <= other.x + other.w
-				&& y + h <= other.y + other.h;
+		return x >= other.x && y >= other.y && x + w <= other.x + other.w && y + h <= other.y + other.h;
+	}
+
+	public boolean isValid() {
+		return x >= 0 && y >= 0 && w > 0 && h > 0;
 	}
 }
