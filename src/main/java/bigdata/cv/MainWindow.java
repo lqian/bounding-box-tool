@@ -29,6 +29,7 @@ import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.CardLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -139,6 +140,8 @@ public class MainWindow implements WindowListener {
 	private JButton btnSave;
 	private JButton btnCorp;
 	private JButton btnAbout;
+	
+	JButton btnOpenClazz;
 
 	boolean filtered = false;
 
@@ -147,6 +150,12 @@ public class MainWindow implements WindowListener {
 	FilterDialog filterDialog;
 
 	private JButton btnAutoForward;
+	
+	CardLayout cardLayout = new CardLayout();
+	JPanel cards = new JPanel(cardLayout);
+	JPanel annotationPanel = new JPanel(new BorderLayout());
+	JPanel classificationPanel = new JPanel(new BorderLayout());
+	
 
 	/**
 	 * Launch the application.
@@ -431,8 +440,26 @@ public class MainWindow implements WindowListener {
 			}
 
 		});
+		
+		this.btnOpenClazz.addActionListener(new ActionListener () {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser chooser = new JFileChooser();
+				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = chooser.showOpenDialog(frame);
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					 //
+					cardLayout.show(cards, "classificationPanel");
+				}
+			}
+		});
 	}
 
+	void buildClassificationPanel() {
+		
+	}
+	
 	void deleteCurrentFiles() {
 		String fileName = imageFiles.get(currentImageIndex);
 		imageFiles.remove(currentImageIndex);
@@ -461,7 +488,8 @@ public class MainWindow implements WindowListener {
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new BorderLayout(10, 10));
-
+		
+		
 		JToolBar toolBar = new JToolBar();
 		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
 		btnOpen = new JButton(icon("open.gif", "open dataset"));
@@ -507,16 +535,28 @@ public class MainWindow implements WindowListener {
 		// label class filter"));
 		// btnClearFilter.setToolTipText("clear current label class filter");
 		// toolBar.add(btnClearFilter);
+		
+		toolBar.addSeparator();
+		btnOpenClazz = new JButton(icon("open-clazz-dataset.png", "open classification dataset"));
+		btnOpenClazz.setToolTipText("open classification dataset");
+		toolBar.add(btnOpenClazz);
 
 		toolBar.addSeparator();
 		btnAbout = new JButton(icon("about.gif", ""));
 		toolBar.add(btnAbout);
 
+		
+		frame.getContentPane().add(cards, BorderLayout.CENTER);
+		
+		cards.add(annotationPanel, "annotationPanel");
+		cards.add(classificationPanel, "classificationPanel");
+		
 		btnRemoveBoundingBox = new JButton("Remove");
 		btnCleanBoundingBox = new JButton("Clear All");
 
+		
 		JPanel centerPanel = new JPanel();
-		frame.getContentPane().add(centerPanel, BorderLayout.CENTER);
+		annotationPanel.add(centerPanel, BorderLayout.CENTER);
 		centerPanel.setLayout(new BorderLayout(5, 5));
 
 		String[] columnNames = { "Label", "Bounding Box" };
@@ -529,7 +569,7 @@ public class MainWindow implements WindowListener {
 		};
 
 		JPanel toolBoxPanel = new JPanel();
-		frame.getContentPane().add(toolBoxPanel, BorderLayout.EAST);
+		annotationPanel.add(toolBoxPanel, BorderLayout.EAST);
 		toolBoxPanel.setLayout(new BorderLayout(5, 5));
 		JPanel centerToolBox = new JPanel();
 		toolBoxPanel.add(centerToolBox, BorderLayout.CENTER);
@@ -776,6 +816,8 @@ public class MainWindow implements WindowListener {
 				autoLocateImage();
 				btnDelete.setEnabled(true);
 				imagePanel.enabled = true;
+				CardLayout layout = (CardLayout)frame.getContentPane().getLayout();
+				layout.show(frame.getContentPane(), "annotationPanel");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
