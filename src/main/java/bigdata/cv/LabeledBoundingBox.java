@@ -67,6 +67,20 @@ public class LabeledBoundingBox {
 			return null;
 		}
 	}
+	
+	public static LabeledBoundingBox fromPos(String line) {
+		String[] tokens = line.split(",", 4);
+		if (tokens.length == 4) {
+			LabeledBoundingBox bb = new LabeledBoundingBox();
+			bb.x = Integer.valueOf(tokens[0]);
+			bb.y = Integer.valueOf(tokens[1]);
+			bb.w = Integer.valueOf(tokens[2]);
+			bb.h = Integer.valueOf(tokens[3]);
+			return bb;
+		} else {
+			return null;
+		}
+	}
 
 	public boolean isWithin(LabeledBoundingBox other) {
 		return x >= other.x && y >= other.y && x + w <= other.x + other.w && y + h <= other.y + other.h;
