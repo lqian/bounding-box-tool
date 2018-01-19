@@ -4,6 +4,7 @@
 package bigdata.cv;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
@@ -17,13 +18,14 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 
 /**
@@ -35,7 +37,6 @@ public class ClassificationPanel extends JPanel {
 	BorderLayout boderLayout = new BorderLayout(10, 10);
 
 	JPanel toolPanel = new JPanel();
-
 
 	Path path;
 
@@ -55,30 +56,54 @@ public class ClassificationPanel extends JPanel {
 		super();
 
 		setLayout(boderLayout);
-		
+
 		add(toolPanel, BorderLayout.SOUTH);
 		imageTable = new JTable(dataModel);
 		imageTable.setAutoscrolls(false);
 		imageTable.setDragEnabled(false);
 		imageTable.setTableHeader(null);
-		for (int i=0; i< dataModel.getColumnCount(); i++) {
+		// imageTable.set
+		// imageTable.setSelectionMode(selectionMode);
+		for (int i = 0; i < dataModel.getColumnCount(); i++) {
 			imageTable.getColumnModel().getColumn(i).setCellRenderer(new ImageCellRenderer());
 		}
-		
+
 		JScrollPane scrollPane = new JScrollPane(imageTable);
 		add(scrollPane, BorderLayout.CENTER);
-		 
+
 		imageTable.setRowHeight(200);
+
+		imageTable.setCellSelectionEnabled(true);
+
+		imageTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+		imageTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (e.getValueIsAdjusting()) {
+					int row = imageTable.getSelectedRow();
+					int col = imageTable.getSelectedColumn();
+					ImageFile imageFile = (ImageFile)dataModel.getValueAt(row, col);
+					imageFile.selected = true;
+					dataModel.fireTableCellUpdated(row, col);
+				}
+			}
+
+		});
+
+		// imageTable.
 	}
 
 	void init(String dir) throws IOException {
 		path = Paths.get(dir);
 
-		Files.newDirectoryStream(path).forEach(p -> fileNames.add(p.getFileName().toString()));
+		Files.newDirectoryStream(path).forEach(p -> {
+			if (p.getFileName().toString().endsWith("jpg")) {
+				fileNames.add(p.getFileName().toString());
+			}
+		});
 
-		// Files.walk(path).filter(
-		// p -> p.getFileName().endsWith("jpg"))
-		// .forEach(p -> fileNames.add(p.getFileName().toString()));
 		Collections.sort(fileNames);
 
 		Path meta = path.resolve("meta");
@@ -105,17 +130,33 @@ public class ClassificationPanel extends JPanel {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-
 			}
 		}
+	}
+	
+	void pageDown() {
+		currentIndex += dataModel.getRowCount() * dataModel.getColumnCount();
+		dataModel.clean();
 		
-		
+	}
+	
+	void pageUp() {
+		currentIndex -= dataModel.getRowCount() * dataModel.getColumnCount();
+		dataModel.clean();
 	}
 
 	class ImageTableModel extends AbstractTableModel {
-		
+
 		List<Object> data = new ArrayList<>();
 		
+		int rowCount;
+		
+		int columnCount;
+
+		public void setColumnCount(int columnCount) {
+			this.columnCount = columnCount;
+		}
+
 		@Override
 		public int getRowCount() {
 			return 4;
@@ -134,37 +175,51 @@ public class ClassificationPanel extends JPanel {
 		@Override
 		public void setValueAt(Object aValue, int row, int col) {
 			data.add(aValue);
-			fireTableCellUpdated(row, col);
+//			fireTableCellUpdated(row, col);
+		}
+		public void setRowCount(int rowCount) {
+			this.rowCount = rowCount;
+		}
+		
+		void clean() {
+			data.clear();
+		}
+
+		@Override
+		public boolean isCellEditable(int rowIndex, int columnIndex) {
+			return false;
 		}
 	}
-	
+
 	class ImageCellRenderer extends JPanel implements TableCellRenderer {
 
 		BufferedImage image;
+		ImageFile imageFile;
+
 		public ImageCellRenderer() {
-			setOpaque(true);
+//			setOpaque(true);
 			setLayout(new BorderLayout());
 			add(checkBox, BorderLayout.SOUTH);
-			
+
 		}
-		
+
 		void setImage(BufferedImage c) {
 			ImagePanel imagePanel = new ImagePanel(c);
-			
-			add(imagePanel, BorderLayout.CENTER);
+
+			// add(imagePanel, BorderLayout.CENTER);
 			imagePanel.updateUI();
-			//imagePanel.repaint();
+			// imagePanel.repaint();
 		}
 
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
 				int row, int column) {
-			ImageFile imageFile = (ImageFile) value;
+			imageFile = (ImageFile) value;
 			checkBox.setText(imageFile.baseName);
-			setImage(imageFile.image); 
-			//image = imageFile.image;
-			// updateUI();
-			//setHeight(200);
+//			setImage(imageFile.image);
+			image = imageFile.image;
+			updateUI();
+			// setHeight(200);
 			return this;
 		}
 
@@ -174,17 +229,50 @@ public class ClassificationPanel extends JPanel {
 
 		JCheckBox checkBox = new JCheckBox();
 
-		/*@Override
+		@Override
 		public void paint(Graphics g) {
-			if (image != null) {
-				g.drawImage(image, 0, 0, null);
+			int pw = getWidth();
+			int ph = getHeight();
+			if (imageFile.selected) {
+				g.setColor(Color.blue);
+				g.fillRect(0, 0, pw, ph);
 			}
-		}*/
+			else {
+				setOpaque(true);
+				g.setColor(getBackground());
+				g.fillRect(0, 0, pw, ph);
+			}
+//			
+			
+			
+			if (image != null) {
+				
+				int iw = image.getWidth();
+				int ih = image.getHeight();
+				int x = 0, y = 0;
+				double sw = iw * 1.0 / ph;
+				double sh = ih * 1.0 / pw;
+				double scaleFactor = sh > sw ? sh : sw;
+				if (scaleFactor < 1) {
+					scaleFactor = 1;
+				}
+
+				{
+					int w = (int) (iw / scaleFactor);
+					int h = (int) (ih / scaleFactor);
+					x = (pw - w) / 2 - 1;
+					y = (ph - h) / 2 - 1;
+					g.drawImage(image, x, y, w, h, this);
+				}
+			}
+		}
+		
+		
 	}
 
 	class ImagePanel extends JPanel {
 		BufferedImage image;
-		
+
 		ImagePanel(BufferedImage image) {
 			this.image = image;
 		}
@@ -198,6 +286,7 @@ public class ClassificationPanel extends JPanel {
 	}
 
 	class ImageFile {
+		boolean selected = false;
 		String baseName;
 		BufferedImage image;
 	}
