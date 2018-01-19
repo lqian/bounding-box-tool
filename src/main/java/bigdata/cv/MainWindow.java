@@ -25,11 +25,11 @@ import static javax.swing.JOptionPane.YES_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.CardLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
@@ -154,7 +154,7 @@ public class MainWindow implements WindowListener {
 	CardLayout cardLayout = new CardLayout();
 	JPanel cards = new JPanel(cardLayout);
 	JPanel annotationPanel = new JPanel(new BorderLayout());
-	JPanel classificationPanel = new JPanel(new BorderLayout());
+	ClassificationPanel classificationPanel = new ClassificationPanel();
 	
 
 	/**
@@ -450,7 +450,13 @@ public class MainWindow implements WindowListener {
 				int returnVal = chooser.showOpenDialog(frame);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					 //
-					cardLayout.show(cards, "classificationPanel");
+					try {
+						classificationPanel.init(chooser.getSelectedFile().getAbsolutePath());
+						cardLayout.show(cards, "classificationPanel");
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					
 				}
 			}
 		});
