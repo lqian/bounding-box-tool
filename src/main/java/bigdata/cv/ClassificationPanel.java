@@ -55,6 +55,8 @@ public class ClassificationPanel extends JPanel {
 
 	ImageTableModel dataModel = new ImageTableModel();
 	JTable imageTable;
+	
+	JCheckBox autoDelete = new JCheckBox("Auto Delete Selected Image");
 
 	/**
 	 * 
@@ -119,11 +121,15 @@ public class ClassificationPanel extends JPanel {
 			
 		});
 		
+		
+		
 		toolPanel.add(btnFirst);
 		toolPanel.add(btnPageUp);
 		toolPanel.add(btnPageDown);
 		toolPanel.add(btnAuto);
 		toolPanel.add(btnDelete);
+		toolPanel.add(autoDelete);
+		
 		
 		JLabel lblRows = new JLabel("Rows:");
 		toolPanel.add(lblRows);
@@ -167,6 +173,9 @@ public class ClassificationPanel extends JPanel {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				if (autoDelete.isSelected()) {
+					btnDelete.doClick();
+				}
 				currentIndex = 0;
 				dataModel.clean();
 				showImage();
@@ -177,8 +186,13 @@ public class ClassificationPanel extends JPanel {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				
+				
 				int batch = dataModel.getRowCount() * dataModel.getColumnCount();
 				if (currentIndex >= batch) {
+					if (autoDelete.isSelected()) {
+						btnDelete.doClick();
+					}
 					currentIndex -= batch;
 					dataModel.clean();
 					showImage();
@@ -194,13 +208,15 @@ public class ClassificationPanel extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				int batch = dataModel.getRowCount() * dataModel.getColumnCount();
 				if (currentIndex + batch < fileNames.size()) {
+					if (autoDelete.isSelected()) {
+						btnDelete.doClick();
+					}
 					currentIndex += batch;
 					dataModel.clean();
 					showImage();
 					writeMeta();
 				}
 			}
-			
 		});
 		
 		btnAuto.addActionListener(new ActionListener() {
