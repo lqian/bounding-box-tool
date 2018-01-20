@@ -822,8 +822,8 @@ public class MainWindow implements WindowListener {
 				autoLocateImage();
 				btnDelete.setEnabled(true);
 				imagePanel.enabled = true;
-				CardLayout layout = (CardLayout)frame.getContentPane().getLayout();
-				layout.show(frame.getContentPane(), "annotationPanel");
+//				CardLayout layout = (CardLayout)frame.getContentPane().getLayout();
+				cardLayout.show(cards, "annotationPanel");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

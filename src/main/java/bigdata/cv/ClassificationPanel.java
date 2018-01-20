@@ -7,8 +7,11 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,11 +21,17 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.imageio.ImageIO;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
@@ -57,7 +66,7 @@ public class ClassificationPanel extends JPanel {
 
 		setLayout(boderLayout);
 
-		add(toolPanel, BorderLayout.SOUTH);
+		
 		imageTable = new JTable(dataModel);
 		imageTable.setAutoscrolls(false);
 		imageTable.setDragEnabled(false);
@@ -85,7 +94,7 @@ public class ClassificationPanel extends JPanel {
 					int row = imageTable.getSelectedRow();
 					int col = imageTable.getSelectedColumn();
 					ImageFile imageFile = (ImageFile)dataModel.getValueAt(row, col);
-					imageFile.selected = true;
+					imageFile.selected = !imageFile.selected;
 					dataModel.fireTableCellUpdated(row, col);
 				}
 			}
@@ -93,8 +102,129 @@ public class ClassificationPanel extends JPanel {
 		});
 
 		// imageTable.
+		
+		add(toolPanel, BorderLayout.SOUTH);
+		
+		JButton btnFirst = new JButton("!<");
+		JButton btnPageUp = new JButton("<<");
+		JButton btnPageDown = new JButton(">>");
+		JButton btnAuto = new JButton("->");
+		
+		JButton btnDelete = new JButton("XXX");
+		btnDelete.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				dataModel.removeSelected();			}
+			
+		});
+		
+		toolPanel.add(btnFirst);
+		toolPanel.add(btnPageUp);
+		toolPanel.add(btnPageDown);
+		toolPanel.add(btnAuto);
+		toolPanel.add(btnDelete);
+		
+		JLabel lblRows = new JLabel("Rows:");
+		toolPanel.add(lblRows);
+		JSpinner spRows = new JSpinner();
+		toolPanel.add(spRows);
+		spRows.setModel(new SpinnerNumberModel(5, 5, 20, 1));
+		
+		
+		lblRows.setLabelFor(spRows);
+		JLabel lblCols = new JLabel("Cols:");
+		toolPanel.add(lblCols);
+		JSpinner spCols = new JSpinner();
+		spCols.setModel(new SpinnerNumberModel(6, 6, 24, 1));
+		lblCols.setLabelFor(spCols);
+		toolPanel.add(spCols);
+		
+		spRows.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				int oc = dataModel.getColumnCount();
+				int nc = (Integer)spRows.getValue();
+				if (oc > nc) {
+					dataModel.removeLastRow();
+				}
+			}
+			
+		});
+		
+		
+		spCols.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				dataModel.setColumnCount((Integer)spCols.getValue());
+			}
+			
+		});
+		
+		btnFirst.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				currentIndex = 0;
+				dataModel.clean();
+				showImage();
+			}
+		});
+		
+		btnPageUp.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				int batch = dataModel.getRowCount() * dataModel.getColumnCount();
+				if (currentIndex >= batch) {
+					currentIndex -= batch;
+					dataModel.clean();
+					showImage();
+					writeMeta();
+				}
+			}
+			
+		});
+		
+		btnPageDown.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				int batch = dataModel.getRowCount() * dataModel.getColumnCount();
+				if (currentIndex + batch < fileNames.size()) {
+					currentIndex += batch;
+					dataModel.clean();
+					showImage();
+					writeMeta();
+				}
+			}
+			
+		});
+		
+		btnAuto.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+		});
+		
 	}
 
+	void writeMeta() {
+		Path meta = path.resolve("meta");
+			
+			try (BufferedWriter writer = Files.newBufferedWriter(meta)) {
+				writer.write(currentIndex+"");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+	}
+	
 	void init(String dir) throws IOException {
 		path = Paths.get(dir);
 
@@ -147,11 +277,28 @@ public class ClassificationPanel extends JPanel {
 
 	class ImageTableModel extends AbstractTableModel {
 
-		List<Object> data = new ArrayList<>();
+		List<ImageFile> data = new ArrayList<>();
 		
-		int rowCount;
+		int rowCount = 5;
 		
-		int columnCount;
+		int columnCount = 8;
+		
+		ImageTableModel() {}
+		
+		public void removeLastRow() {
+			for (int i=0; i< columnCount; i++) {
+				
+				data.remove(data.size() - 1);
+//				fireTableCellUpdated(row, col);
+			};
+			
+		}
+
+		public ImageTableModel(int rowCount, int columnCount) {
+			super();
+			this.rowCount = rowCount;
+			this.columnCount = columnCount;
+		}
 
 		public void setColumnCount(int columnCount) {
 			this.columnCount = columnCount;
@@ -159,12 +306,12 @@ public class ClassificationPanel extends JPanel {
 
 		@Override
 		public int getRowCount() {
-			return 4;
+			return rowCount;
 		}
 
 		@Override
 		public int getColumnCount() {
-			return 6;
+			return columnCount;
 		}
 
 		@Override
@@ -174,11 +321,27 @@ public class ClassificationPanel extends JPanel {
 
 		@Override
 		public void setValueAt(Object aValue, int row, int col) {
-			data.add(aValue);
-//			fireTableCellUpdated(row, col);
+			data.add((ImageFile)aValue);
+			fireTableCellUpdated(row, col);
 		}
 		public void setRowCount(int rowCount) {
 			this.rowCount = rowCount;
+		}
+		
+		public void removeSelected() {
+			for (ImageFile e: data) {
+				if (e.selected) {
+					fileNames.remove(e.baseName);
+					try {
+						Files.deleteIfExists(path.resolve(e.baseName));
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+				}
+			}
+			
+			data.clear();
+			showImage();
 		}
 		
 		void clean() {
@@ -234,7 +397,7 @@ public class ClassificationPanel extends JPanel {
 			int pw = getWidth();
 			int ph = getHeight();
 			if (imageFile.selected) {
-				g.setColor(Color.blue);
+				g.setColor(Color.BLUE);
 				g.fillRect(0, 0, pw, ph);
 			}
 			else {

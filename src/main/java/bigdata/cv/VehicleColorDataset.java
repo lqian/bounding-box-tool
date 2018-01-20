@@ -44,7 +44,7 @@ public class VehicleColorDataset {
 		Connection conn = DriverManager.getConnection(
 				"jdbc:mysql://localhost:3306/corpus?useUnicode=yes&characterEncoding=utf8", "root", "123456");
 
-		for (int i = 0; i <= maxColorId; i++) {
+		for (int i = 4; i <= maxColorId; i++) {
 			Path sub = targetPath.resolve("" + i);
 
 			String sql = "select path, vehicle_position from vehicle_dataset where vehicle_color=" + i + " limit 7000";
