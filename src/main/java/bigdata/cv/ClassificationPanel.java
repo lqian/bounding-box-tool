@@ -9,13 +9,17 @@ import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,10 +57,18 @@ public class ClassificationPanel extends JPanel {
 
 	int currentIndex = 0;
 
-	ImageTableModel dataModel = new ImageTableModel();
+	ImageTableModel dataModel;
 	JTable imageTable;
 	
 	JCheckBox autoDelete = new JCheckBox("Auto Delete Selected Image");
+	
+	BufferedWriter blacklist;
+
+	private JSpinner spRows;
+
+	private JSpinner spCols;
+
+	private JScrollPane scrollPane;
 
 	/**
 	 * 
@@ -66,42 +78,7 @@ public class ClassificationPanel extends JPanel {
 	public ClassificationPanel() {
 		super();
 
-		setLayout(boderLayout);
-
-		
-		imageTable = new JTable(dataModel);
-		imageTable.setAutoscrolls(false);
-		imageTable.setDragEnabled(false);
-		imageTable.setTableHeader(null);
-		// imageTable.set
-		// imageTable.setSelectionMode(selectionMode);
-		for (int i = 0; i < dataModel.getColumnCount(); i++) {
-			imageTable.getColumnModel().getColumn(i).setCellRenderer(new ImageCellRenderer());
-		}
-
-		JScrollPane scrollPane = new JScrollPane(imageTable);
-		add(scrollPane, BorderLayout.CENTER);
-
-		imageTable.setRowHeight(200);
-
-		imageTable.setCellSelectionEnabled(true);
-
-		imageTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-		imageTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				if (e.getValueIsAdjusting()) {
-					int row = imageTable.getSelectedRow();
-					int col = imageTable.getSelectedColumn();
-					ImageFile imageFile = (ImageFile)dataModel.getValueAt(row, col);
-					imageFile.selected = !imageFile.selected;
-					dataModel.fireTableCellUpdated(row, col);
-				}
-			}
-
-		});
+		setLayout(boderLayout); 
 
 		// imageTable.
 		
@@ -119,9 +96,7 @@ public class ClassificationPanel extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				dataModel.removeSelected();			}
 			
-		});
-		
-		
+		}); 
 		
 		toolPanel.add(btnFirst);
 		toolPanel.add(btnPageUp);
@@ -133,16 +108,16 @@ public class ClassificationPanel extends JPanel {
 		
 		JLabel lblRows = new JLabel("Rows:");
 		toolPanel.add(lblRows);
-		JSpinner spRows = new JSpinner();
+		spRows = new JSpinner();
 		toolPanel.add(spRows);
-		spRows.setModel(new SpinnerNumberModel(5, 5, 20, 1));
+		spRows.setModel(new SpinnerNumberModel(5, 5, 9, 1));
 		
 		
 		lblRows.setLabelFor(spRows);
 		JLabel lblCols = new JLabel("Cols:");
 		toolPanel.add(lblCols);
-		JSpinner spCols = new JSpinner();
-		spCols.setModel(new SpinnerNumberModel(6, 6, 24, 1));
+		spCols = new JSpinner();
+		spCols.setModel(new SpinnerNumberModel(8, 6, 12, 1));
 		lblCols.setLabelFor(spCols);
 		toolPanel.add(spCols);
 		
@@ -150,10 +125,12 @@ public class ClassificationPanel extends JPanel {
 
 			@Override
 			public void stateChanged(ChangeEvent e) {
-				int oc = dataModel.getColumnCount();
+				
+				
+				int oc = dataModel.getRowCount();
 				int nc = (Integer)spRows.getValue();
-				if (oc > nc) {
-					dataModel.removeLastRow();
+				if (oc != nc) {
+					initTable(nc, (Integer) spCols.getValue());
 				}
 			}
 			
@@ -168,6 +145,8 @@ public class ClassificationPanel extends JPanel {
 			}
 			
 		});
+		
+		
 		
 		btnFirst.addActionListener(new ActionListener() {
 
@@ -231,6 +210,67 @@ public class ClassificationPanel extends JPanel {
 		
 	}
 
+	private void initTable(int rows, int cols) {
+		
+		if (imageTable != null) {
+			remove(imageTable);
+		}
+		
+		if (scrollPane != null ) {
+			remove(scrollPane);
+		}
+		
+		dataModel = new ImageTableModel(rows, cols);
+		
+		imageTable = new JTable(dataModel);
+		imageTable.setAutoscrolls(false);
+		imageTable.setDragEnabled(false);
+		imageTable.setTableHeader(null);
+		// imageTable.set
+		// imageTable.setSelectionMode(selectionMode);
+		for (int i = 0; i < dataModel.getColumnCount(); i++) {
+			imageTable.getColumnModel().getColumn(i).setCellRenderer(new ImageCellRenderer());
+		}
+
+		scrollPane = new JScrollPane(imageTable);
+		add(scrollPane, BorderLayout.CENTER);
+
+		imageTable.setRowHeight((getHeight()-30) / dataModel.getRowCount());
+
+		imageTable.setCellSelectionEnabled(true);
+
+		imageTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+//		imageTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+//
+//			@Override
+//			public void valueChanged(ListSelectionEvent e) {
+//				if (!e.getValueIsAdjusting()) {
+//					int row = imageTable.getSelectedRow();
+//					int col = imageTable.getSelectedColumn();
+//					ImageFile imageFile = (ImageFile)dataModel.getValueAt(row, col);
+//					imageFile.selected = !imageFile.selected;
+//					dataModel.fireTableCellUpdated(row, col);
+//				}
+//			}
+//
+//		});
+		
+		imageTable.addMouseListener(new MouseAdapter() {
+
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				int row = imageTable.rowAtPoint(e.getPoint());
+				int col = imageTable.columnAtPoint(e.getPoint());
+				ImageFile imageFile = (ImageFile)dataModel.getValueAt(row, col);
+				imageFile.selected = !imageFile.selected;
+				dataModel.fireTableCellUpdated(row, col);
+				
+			}
+		});
+		imageTable.updateUI();
+	}
+
 	void writeMeta() {
 		Path meta = path.resolve("meta");
 			
@@ -242,8 +282,10 @@ public class ClassificationPanel extends JPanel {
 	}
 	
 	void init(String dir) throws IOException {
+		currentIndex = 0;
+		fileNames.clear();
 		path = Paths.get(dir);
-
+		
 		Files.newDirectoryStream(path).forEach(p -> {
 			if (p.getFileName().toString().endsWith("jpg")) {
 				fileNames.add(p.getFileName().toString());
@@ -251,6 +293,8 @@ public class ClassificationPanel extends JPanel {
 		});
 
 		Collections.sort(fileNames);
+		
+		initTable((Integer)spRows.getValue(), (Integer)spCols.getValue());
 
 		Path meta = path.resolve("meta");
 		if (Files.exists(meta)) {
@@ -258,8 +302,16 @@ public class ClassificationPanel extends JPanel {
 			currentIndex = Integer.valueOf(reader.readLine());
 			reader.close();
 		}
+		
+		Path blp = path.resolve("blacklist");
+		if (Files.notExists(blp)) {
+			Files.createFile(blp);
+		}
+		
+		blacklist = Files.newBufferedWriter(blp, StandardOpenOption.APPEND);
 
 		showImage();
+		updateUI();
 	}
 
 	void showImage() {
@@ -350,14 +402,21 @@ public class ClassificationPanel extends JPanel {
 					fileNames.remove(e.baseName);
 					try {
 						Files.deleteIfExists(path.resolve(e.baseName));
+						blacklist.write(e.baseName);
+						blacklist.newLine();
+						
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
 				}
 			}
-			
-			data.clear();
-			showImage();
+			try {
+				blacklist.flush();
+				data.clear();
+				showImage();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 		}
 		
 		void clean() {
@@ -378,7 +437,7 @@ public class ClassificationPanel extends JPanel {
 		public ImageCellRenderer() {
 //			setOpaque(true);
 			setLayout(new BorderLayout());
-			add(checkBox, BorderLayout.SOUTH);
+			//add(checkBox, BorderLayout.SOUTH);
 
 		}
 
@@ -393,20 +452,13 @@ public class ClassificationPanel extends JPanel {
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
 				int row, int column) {
-			imageFile = (ImageFile) value;
-			checkBox.setText(imageFile.baseName);
-//			setImage(imageFile.image);
+			imageFile = (ImageFile) value; 
 			image = imageFile.image;
-			updateUI();
-			// setHeight(200);
+			updateUI(); 
 			return this;
 		}
 
-		public boolean isSelected() {
-			return checkBox.isSelected();
-		}
-
-		JCheckBox checkBox = new JCheckBox();
+		 
 
 		@Override
 		public void paint(Graphics g) {

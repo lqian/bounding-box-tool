@@ -1,7 +1,7 @@
 /**
  * 
  */
-package bigdata.cv;
+package dataset;
 
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
@@ -17,11 +17,13 @@ import java.sql.ResultSet;
 
 import javax.imageio.ImageIO;
 
+import bigdata.cv.LabeledBoundingBox;
+
 /**
  * @author lqian
  *
  */
-public class VehicleColorDataset {
+public class VehicleColor {
 
 	/**
 	 * @param args
