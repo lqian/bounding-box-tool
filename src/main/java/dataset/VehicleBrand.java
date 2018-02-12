@@ -82,9 +82,9 @@ public class VehicleBrand {
 				subid = counter.get(subPath);
 			}
 
-			String normalName = String.format("b%04d%03d%03d_%08d.JPG", brand, subBrand, model, subid);
+			String normalName = Util.normal(brand, subBrand, model, subid);
 			
-			Path target = targetDir.resolve(subPath).resolve(normalName);
+			Path target = targetDir.resolve(normalName);
 			if (Files.exists(source)) {
 				Files.move(source, target);
 				counter.put(subPath, ++subid);
