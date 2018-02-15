@@ -52,7 +52,8 @@ public class HierarchyBrand {
 		PreparedStatement pstm = conn.prepareStatement(
 				"select id from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
 		ResultSet rs = stm
-				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset"
+				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset vd join brand_dictionary bd"
+						+ "on vehicle_brand = brand and vehicle_sub_brand = subBrand and vehicle_model = model"
 						+ " group by vehicle_brand, vehicle_sub_brand, vehicle_model");
 		BufferedWriter train = Files.newBufferedWriter(Paths.get("train.list"));
 		BufferedWriter valid = Files.newBufferedWriter(Paths.get("valid.list"));
