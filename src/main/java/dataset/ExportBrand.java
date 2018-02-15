@@ -16,6 +16,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
@@ -24,8 +27,12 @@ import javax.imageio.ImageIO;
  *
  */
 public class ExportBrand {
+	
+	static ExecutorService service = Executors.newFixedThreadPool(4);
 
 	static Path home;
+	
+	static AtomicInteger count = new AtomicInteger(0);
 
 	/**
 	 * @param args
@@ -67,18 +74,16 @@ public class ExportBrand {
 			pstm.setInt(3, be.model);
 
 			rs = pstm.executeQuery();
-			int count = 0;
+			
 			while (rs.next()) {
 				long id = rs.getLong("id");
 				String path = rs.getString("path");
 				String vehiclePosition = rs.getString("vehicle_position");
-				if (corpVehicle(be, path, id, vehiclePosition)) {
-					count++;
-				}
+				service.submit(new Corp(be, path, id, vehiclePosition)) ;
 
 			}
 			rs.close();
-			System.out.format("corp %05d image for %s %n", count, be);
+			System.out.format("corp %05d image for %s %n", count.get(), be);
 		}
 		pstm.close();
 	}
@@ -91,36 +96,54 @@ public class ExportBrand {
 		return conn;
 	}
 
-	private static boolean corpVehicle(BrandEntity be, String path, long id, String vehiclePosition) {
-		try {
+	static class Corp implements Runnable {
+		
+		BrandEntity brandEntity;
+		String path;
+		long id;
+		String vehiclePosition;
 
-			File file = new File(path);
-			if (file.isFile()) {
-				long len = file.length();
-				if (len <= 80000) {
+		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition) {
+			super();
+			this.brandEntity = brandEntity;
+			this.path = path;
+			this.id = id;
+			this.vehiclePosition = vehiclePosition;
+		}
 
-				} else {
-					File tf = home.resolve(Util.normal(be, id)).toFile();
-					if (!tf.exists()) {
-						BufferedImage image = ImageIO.read(file);
-						String tokens[] = vehiclePosition.split("[\\s,]", 4);
-						if (tokens.length == 4) {
-							int x = Integer.valueOf(tokens[0]);
-							int y = Integer.valueOf(tokens[1]);
-							int w = Integer.valueOf(tokens[2]);
-							int h = Integer.valueOf(tokens[3]);
-							BufferedImage subImage = image.getSubimage(x, y, w, h);
-							ImageIO.write(subImage, "jpg", tf);
-							return true;
+
+		@Override
+		public void run() {
+			 
+			try {
+
+				File file = new File(path);
+				if (file.isFile()) {
+					long len = file.length();
+					if (len <= 80000) {
+
+					} else {
+						File tf = home.resolve(Util.normal(brandEntity, id)).toFile();
+						if (!tf.exists()) {
+							BufferedImage image = ImageIO.read(file);
+							String tokens[] = vehiclePosition.split("[\\s,]", 4);
+							if (tokens.length == 4) {
+								int x = Integer.valueOf(tokens[0]);
+								int y = Integer.valueOf(tokens[1]);
+								int w = Integer.valueOf(tokens[2]);
+								int h = Integer.valueOf(tokens[3]);
+								BufferedImage subImage = image.getSubimage(x, y, w, h);
+								ImageIO.write(subImage, "jpg", tf);
+								count.incrementAndGet();
+							}
 						}
 					}
 				}
+			} catch (IOException e) {
+				System.err.println(e.toString());
 			}
-		} catch (IOException e) {
-			System.err.println(e.toString());
 		}
-
-		return false;
+		
 	}
 
 	static class BrandEntity implements Comparable<BrandEntity> {
