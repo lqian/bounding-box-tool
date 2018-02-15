@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -75,15 +76,19 @@ public class ExportBrand {
 
 			rs = pstm.executeQuery();
 			AtomicInteger count = new AtomicInteger(0);
+			rs.last();
+			int rows = rs.getRow();
+			CountDownLatch latch = new CountDownLatch(rows);
 			while (rs.next()) {
 				long id = rs.getLong("id");
 				String path = rs.getString("path");
 				String vehiclePosition = rs.getString("vehicle_position");
-				service.submit(new Corp(be, path, id, vehiclePosition, count)) ;
+				service.submit(new Corp(be, path, id, vehiclePosition, latch)) ;
 
 			}
 			rs.close();
-			System.out.format("corp %05d image for %s %n", count.get(), be);
+			latch.await();
+			System.out.format("corp %05d image for %s %n", rows, be);
 		}
 		pstm.close();
 	}
@@ -103,20 +108,20 @@ public class ExportBrand {
 		long id;
 		String vehiclePosition;
 		AtomicInteger count;
+		CountDownLatch latch;
 
-		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition, AtomicInteger count) {
+		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition, CountDownLatch latch) {
 			super();
 			this.brandEntity = brandEntity;
 			this.path = path;
 			this.id = id;
 			this.vehiclePosition = vehiclePosition;
-			this.count = count;
+			this.latch = latch;
 		}
 
 
 		@Override
 		public void run() {
-			 
 			try {
 
 				File file = new File(path);
@@ -144,8 +149,8 @@ public class ExportBrand {
 			} catch (IOException e) {
 				System.err.println(e.toString());
 			}
+			latch.countDown();
 		}
-		
 	}
 
 	static class BrandEntity implements Comparable<BrandEntity> {
