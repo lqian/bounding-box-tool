@@ -32,7 +32,7 @@ public class ExportBrand {
 
 	static Path home;
 	
-	static AtomicInteger count = new AtomicInteger(0);
+	
 
 	/**
 	 * @param args
@@ -74,12 +74,12 @@ public class ExportBrand {
 			pstm.setInt(3, be.model);
 
 			rs = pstm.executeQuery();
-			
+			AtomicInteger count = new AtomicInteger(0);
 			while (rs.next()) {
 				long id = rs.getLong("id");
 				String path = rs.getString("path");
 				String vehiclePosition = rs.getString("vehicle_position");
-				service.submit(new Corp(be, path, id, vehiclePosition)) ;
+				service.submit(new Corp(be, path, id, vehiclePosition, count)) ;
 
 			}
 			rs.close();
@@ -102,13 +102,15 @@ public class ExportBrand {
 		String path;
 		long id;
 		String vehiclePosition;
+		AtomicInteger count;
 
-		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition) {
+		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition, AtomicInteger count) {
 			super();
 			this.brandEntity = brandEntity;
 			this.path = path;
 			this.id = id;
 			this.vehiclePosition = vehiclePosition;
+			this.count = count;
 		}
 
 
