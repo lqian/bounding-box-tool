@@ -29,7 +29,7 @@ import javax.imageio.ImageIO;
  */
 public class ExportBrand {
 	
-	static ExecutorService service = Executors.newFixedThreadPool(4);
+	static ExecutorService service = Executors.newFixedThreadPool(6);
 
 	static Path home;
 	
@@ -78,19 +78,22 @@ public class ExportBrand {
 			AtomicInteger count = new AtomicInteger(0);
 			rs.last();
 			int rows = rs.getRow();
-			CountDownLatch latch = new CountDownLatch(rows);
-			while (rs.next()) {
-				long id = rs.getLong("id");
-				String path = rs.getString("path");
-				String vehiclePosition = rs.getString("vehicle_position");
-				service.submit(new Corp(be, path, id, vehiclePosition, latch)) ;
-
+			if (rows > 0) {
+				CountDownLatch latch = new CountDownLatch(rows);
+				rs.first();
+				do {
+					long id = rs.getLong("id");
+					String path = rs.getString("path");
+					String vehiclePosition = rs.getString("vehicle_position");
+					service.submit(new Corp(be, path, id, vehiclePosition, latch, count));
+				} while (rs.next());
+				latch.await();
+				rs.close();
 			}
-			rs.close();
-			latch.await();
-			System.out.format("corp %05d image for %s %n", rows, be);
+			System.out.format("corp %d/ %d image for %s %n", count.get(), rows, be);
 		}
 		pstm.close();
+		
 	}
 
 	static Connection createConn() throws ClassNotFoundException, SQLException {
@@ -110,13 +113,14 @@ public class ExportBrand {
 		AtomicInteger count;
 		CountDownLatch latch;
 
-		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition, CountDownLatch latch) {
+		public Corp(BrandEntity brandEntity, String path, long id, String vehiclePosition, CountDownLatch latch, AtomicInteger count) {
 			super();
 			this.brandEntity = brandEntity;
 			this.path = path;
 			this.id = id;
 			this.vehiclePosition = vehiclePosition;
 			this.latch = latch;
+			this.count = count;
 		}
 
 
@@ -141,6 +145,7 @@ public class ExportBrand {
 								int h = Integer.valueOf(tokens[3]);
 								BufferedImage subImage = image.getSubimage(x, y, w, h);
 								ImageIO.write(subImage, "jpg", tf);
+								if (count != null)
 								count.incrementAndGet();
 							}
 						}
