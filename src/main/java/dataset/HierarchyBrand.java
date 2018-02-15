@@ -23,7 +23,7 @@ import java.util.List;
 public class HierarchyBrand {
 
 	static final String skip_config_data = "--skip-config-data";
-	static final String skip_train_val_data = "--skip-train-val-data";;
+	static final String skip_train_val_data = "--skip-train-val-data";
 
 	/**
 	 * @param args
@@ -50,7 +50,7 @@ public class HierarchyBrand {
 		Connection conn = ExportBrand.createConn();
 		Statement stm = conn.createStatement();
 		PreparedStatement pstm = conn.prepareStatement(
-				"select path from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
+				"select id from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
 		ResultSet rs = stm
 				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset"
 						+ " group by vehicle_brand, vehicle_sub_brand, vehicle_model");
@@ -63,6 +63,7 @@ public class HierarchyBrand {
 			int model = rs.getInt(3);
 			int total = rs.getInt(4);
 			fill(pstm, train, valid, brand, subBrand, model, total >= 3000);
+			System.out.format("fill brand: %d subBrand: %d model: %d total:%d\n", brand, subBrand, model, total);
 
 		}
 		rs.close();
@@ -84,47 +85,63 @@ public class HierarchyBrand {
 		int counter = 0;
 
 		while (rs.next()) {
-			if (bigger && counter <= 1000 || counter % 3 == 0) {
-				appendList(valid, token, rs);
+			long id = rs.getLong(1);
+			if (bigger && counter <= 1000 || 
+					counter % 3 == 0) {
+				appendList(valid, brand, subBrand, model, id);
 			} else {
-				appendList(train, token, rs);
+				appendList(train, brand, subBrand, model, id);
 			}
 			counter++;
 		}
 
 	}
 
-	static void appendList(BufferedWriter writer, String token, ResultSet rs) throws SQLException, IOException {
-		String path = rs.getString(1);
-		int i = path.indexOf(token);
-		String rpath = path.substring(i);
-		if (i != -1) {
-			writer.write(rpath);
-			writer.newLine();
-		}
+	private static void appendList(BufferedWriter writer, int brand, int subBrand, int model, long id) throws IOException {
+		writer.write(Util.normal(brand, subBrand, model, id));
+		writer.newLine();
 	}
-
-	 
 
 	static void createConfigData() throws ClassNotFoundException, SQLException, IOException {
 		Connection conn = ExportBrand.createConn();
-		BufferedWriter writer = Files.newBufferedWriter(Paths.get("brand.tree"));
-		String sql = "select distinct brand from vehicle_brand where brand=1028";
+		BufferedWriter tree = Files.newBufferedWriter(Paths.get("brand.tree"));
+		BufferedWriter list = Files.newBufferedWriter(Paths.get("brand.list"));
+		BufferedWriter names = Files.newBufferedWriter(Paths.get("brand.names"));
+//		String sql = "select distinct brand from vehicle_brand where brand=1028";
+		String sql = "select distinct brand from vehicle_brand";
 		ResultSet rs = conn.createStatement().executeQuery(sql);
+		PreparedStatement pstm1 = conn.prepareStatement("select subBrandNameEng from brand_dictionary where brand=? limit 1");
 
 		List<Integer> brands = new ArrayList<>();
 		while (rs.next()) {
 			int brand = rs.getInt(1);
 			brands.add(brand);
-			writer.write(String.format("b%04d000000 -1\n", brand));
+			list.write(String.format("b%04d000000\n", brand));
+			tree.write(String.format("b%04d000000 -1\n", brand));
+			pstm1.setInt(1, brand);
+			ResultSet rs1 = pstm1.executeQuery();
+			if (rs1.next()) {
+				String subBrandNameEng = rs1.getString(1);
+				String[] tokens = subBrandNameEng.split("_", 4);
+				names.write(tokens[0] + "_" + tokens[1] + "_" + tokens[2]);
+				names.newLine();
+			}
+			else {
+				names.write(String.format("b%04d000000\n", brand));
+				names.newLine();
+			}
+			rs1.close();
 		}
 		rs.close();
-
+		tree.flush();
+		names.flush();
+		list.flush();
 		int rows = brands.size();
 
 		List<Integer> subBrands = new ArrayList<>();
 		PreparedStatement pstm = conn.prepareStatement(
-				"select distinct subbrand from vehicle_brand where brand=? and subbrand!=0 order by subbrand");
+				"select distinct vb.subbrand,  subBrandNameEng from vehicle_brand vb, brand_dictionary bd  "
+				+ "where vb.brand=? and vb.subbrand!=0 and vb.brand = bd.brand and vb.subbrand = bd.subbrand order by vb.subbrand ");
 		for (int i = 0; i < brands.size(); i++) {
 			subBrands.clear();
 			int brand = brands.get(i);
@@ -133,13 +150,18 @@ public class HierarchyBrand {
 			while (rs.next()) {
 				int subBrand = rs.getInt(1);
 				subBrands.add(subBrand);
-				writer.write(String.format("b%04d%03d000 %d\n", brand, subBrand, i));
+				tree.write(String.format("b%04d%03d000 %d\n", brand, subBrand, i));
+				list.write(String.format("b%04d%03d000\n", brand, subBrand));
+				names.write(rs.getString(2)); names.newLine();
 			}
-
+			rs.close();
+			 
 			// model
 			int batch = 0;
 			PreparedStatement pstm2 = conn.prepareStatement(
-					"select model from vehicle_brand where brand=? and subBrand=? and model!=0 order by model");
+					"select distinct bd.model,  fullNameEng from vehicle_brand vb, brand_dictionary bd "
+					+ " where vb.brand=? and vb.subBrand=? and vb.model!=0 and vb.brand=bd.brand and  vb.subbrand = bd.subbrand and vb.model = bd.model"
+					+ " order by model");
 			ResultSet rs2;
 			for (int j = 0; j < subBrands.size(); j++) {
 				int subBrand = subBrands.get(j);
@@ -149,7 +171,10 @@ public class HierarchyBrand {
 
 				while (rs2.next()) {
 					int model = rs2.getInt(1);
-					writer.write(String.format("b%04d%03d%03d %d\n", brand, subBrand, model, rows + j));
+					tree.write(String.format("b%04d%03d%03d %d\n", brand, subBrand, model, rows + j));
+					list.write(String.format("b%04d%03d%03d\n", brand, subBrand, model));
+					names.write(rs2.getString(2));
+					names.newLine();
 					batch++;
 				}
 				rs2.close();
@@ -157,8 +182,10 @@ public class HierarchyBrand {
 			rows += batch + subBrands.size();
 		}
 
-		writer.flush();
-		writer.close();
+		tree.flush();
+		names.flush();
+		list.flush();
+		tree.close();
 		conn.close();
 	}
 }

@@ -59,7 +59,7 @@ public class ExportBrand {
 			}
 		}
 
-		String sql = "select id, path, vehicle_position from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=? limit 2000";
+		String sql = "select id, path, vehicle_position from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?";
 		PreparedStatement pstm = conn.prepareStatement(sql);
 		for (BrandEntity be : list) {
 			pstm.setInt(1, be.brand);
