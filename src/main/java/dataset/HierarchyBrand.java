@@ -52,12 +52,12 @@ public class HierarchyBrand {
 		PreparedStatement pstm = conn.prepareStatement(
 				"select id from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
 		ResultSet rs = stm
-				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset"
+				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset vd join brand_dictionary bd"
+						+ "on vehicle_brand = brand and vehicle_sub_brand = subBrand and vehicle_model = model"
 						+ " group by vehicle_brand, vehicle_sub_brand, vehicle_model");
 		BufferedWriter train = Files.newBufferedWriter(Paths.get("train.list"));
 		BufferedWriter valid = Files.newBufferedWriter(Paths.get("valid.list"));
 		while (rs.next()) {
-
 			int brand = rs.getInt(1);
 			int subBrand = rs.getInt(2);
 			int model = rs.getInt(3);
@@ -159,8 +159,9 @@ public class HierarchyBrand {
 			// model
 			int batch = 0;
 			PreparedStatement pstm2 = conn.prepareStatement(
-					"select distinct bd.model,  fullNameEng from vehicle_brand vb, brand_dictionary bd "
-					+ " where vb.brand=? and vb.subBrand=? and vb.model!=0 and vb.brand=bd.brand and  vb.subbrand = bd.subbrand and vb.model = bd.model"
+					"select distinct vb.model,  fullNameEng from vehicle_brand vb left join brand_dictionary bd  "
+					+ " on  vb.brand=bd.brand and  vb.subbrand = bd.subbrand and vb.model = bd.model"
+					+ " where vb.brand=? and vb.subBrand=? and vb.model!=0"
 					+ " order by model");
 			ResultSet rs2;
 			for (int j = 0; j < subBrands.size(); j++) {
@@ -173,7 +174,8 @@ public class HierarchyBrand {
 					int model = rs2.getInt(1);
 					tree.write(String.format("b%04d%03d%03d %d\n", brand, subBrand, model, rows + j));
 					list.write(String.format("b%04d%03d%03d\n", brand, subBrand, model));
-					names.write(rs2.getString(2));
+					String name = rs2.getString(2);
+					names.write(name == null? "unkonwn" : name);
 					names.newLine();
 					batch++;
 				}

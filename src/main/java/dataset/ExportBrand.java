@@ -84,7 +84,6 @@ public class ExportBrand {
 				String path = rs.getString("path");
 				String vehiclePosition = rs.getString("vehicle_position");
 				service.submit(new Corp(be, path, id, vehiclePosition, latch)) ;
-
 			}
 			rs.close();
 			latch.await();
