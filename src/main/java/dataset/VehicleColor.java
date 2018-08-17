@@ -3,21 +3,13 @@
  */
 package dataset;
 
-import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.nio.file.FileVisitOption;
+import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
 
-import javax.imageio.ImageIO;
-
-import bigdata.cv.LabeledBoundingBox;
+import static java.lang.String.*;
+import static java.nio.file.Files.*;
 
 /**
  * @author lqian
@@ -29,61 +21,51 @@ public class VehicleColor {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		int shrinkRate = 1;
 
-		int maxColorId = 14;
-		Path path = Paths.get("/dataset/vehicle-dataset");
-		Path targetPath = Paths.get("/home/link/vehicle-color-dataset");
+		Path dataset = Paths.get(args[0]);
+		BufferedReader reader = Files.newBufferedReader(Paths.get(args[1])); // read the meta list
+		Path target = Paths.get(args[2]);
+		
+		if (notExists(target)) {
+			createDirectories(target);
+			System.out.println("create target directory: " + target);
+		}
 
-		for (int i = 0; i <= maxColorId; i++) {
-			Path sub = targetPath.resolve("" + i);
-			if (Files.notExists(sub)) {
-				Files.createDirectories(sub);
+		//create all sub catalog
+		for (int i = 0; i < 15; i++) {
+			Path catalog = target.resolve(format("c%02d", i));
+			if (Files.notExists(catalog)) {
+				Files.createDirectories(catalog);
+				System.out.println("create sub catalog: " + catalog);
+			}
+		} 
+		
+		int scanFrom = 0;
+		if (args.length > 3) {
+			scanFrom = Integer.parseInt(args[3]);
+		}
+		
+		int scanEnd = 100000;
+		if (args.length > 4) {
+			scanEnd = Integer.parseInt(args[4]);
+		}
+		
+		String line = null;
+		for (int i=0; i< scanEnd; i++) {
+			line = reader.readLine();
+			if (line == null) break;
+			if (i<scanFrom) continue;
+			
+			RawData rw = RawData.parse(line); 
+
+			Path sourceSample = dataset.resolve(rw.path);
+			Path targetSample = target.resolve(String.format("c%02d/%08d", rw.vehilceColor, i));
+			if (exists(sourceSample) && notExists(targetSample)) { 
+				copy(sourceSample, targetSample);
 			}
 		}
 
-		Class.forName("com.mysql.jdbc.Driver");
-		Connection conn = DriverManager.getConnection(
-				"jdbc:mysql://localhost:3306/corpus?useUnicode=yes&characterEncoding=utf8", "root", "123456");
-
-		for (int i = 4; i <= maxColorId; i++) {
-			Path sub = targetPath.resolve("" + i);
-
-			String sql = "select path, vehicle_position from vehicle_dataset where vehicle_color=" + i + " limit 7000";
-			ResultSet rs = conn.createStatement().executeQuery(sql);
-			int j = 0;
-			while (rs.next() && j < 7000) {
-				String rp = rs.getString("path");
-				String pos = rs.getString("vehicle_position");
-				LabeledBoundingBox lbb = LabeledBoundingBox.fromPos(pos);
-
-				try {
-					BufferedImage image = ImageIO.read(path.resolve(rp).toFile());
-					if (lbb.isValid() && lbb.x + lbb.w <= image.getWidth() 
-							&& lbb.y  + lbb.h <= image.getHeight()) {
-						BufferedImage vehicleImage = image.getSubimage(lbb.x, lbb.y, lbb.w, lbb.h);
-						if (shrinkRate != 1) {
-							BufferedImage scaleImage = new BufferedImage(lbb.w / shrinkRate, lbb.h / shrinkRate,
-									image.getType());
-							AffineTransform transform = new AffineTransform();
-							transform.setToScale(1.0 / shrinkRate, 1.0 / shrinkRate);
-							AffineTransformOp imageOp = new AffineTransformOp(transform, null);
-							imageOp.filter(vehicleImage, scaleImage);
-
-							vehicleImage = scaleImage;
-						}
-						ImageIO.write(vehicleImage, "JPG", sub.resolve(String.format("%d_%04d.jpg", i, j)).toFile());
-						j++;
-					}
-				} catch (IOException e) {
-					System.err.println("can not read image: " + path.resolve(rp));
-				}
-			}
-
-			rs.close();
-			System.out.println("color id: " + i + " " + Files.walk(sub, 1, FileVisitOption.FOLLOW_LINKS).count());
-		}
-		conn.close();
+		reader.close();
 	}
 
 }

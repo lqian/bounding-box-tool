@@ -11,6 +11,12 @@ import java.nio.file.Paths;
 
 import javax.imageio.ImageIO;
 
+/**
+ * 从原始数据中导出YOLO对象检测数据格式
+ * 
+ * @author qian xiafei
+ *
+ */
 public class YoloVehicleType {
 
 	public static void main(String[] args) throws IOException {
@@ -26,7 +32,7 @@ public class YoloVehicleType {
 		String line = null;
 		int counter  = 0;
 		while ( (line = reader.readLine()) != null) {
-			RawData rawData = parse(line);
+			RawData rawData = RawData.parse(line);
 			if (rawData != null) {
 				 BufferedImage image = ImageIO.read(new File(rawData.path));
 				 float w = image.getWidth();
@@ -61,54 +67,6 @@ public class YoloVehicleType {
 		}
 	}
 	
-	static RawData parse(String line) {
-		
-		String tokens[] = line.split(";", 9);
-		if (tokens.length != 9) {
-			RawData rw = new RawData();
-			rw.path = tokens[0];
-			rw.plateNo = tokens[1]; 
-			rw.vehiclePos = Box.parse(tokens[2]);
-			rw.platePos = Box.parse(tokens[3]);
-			rw.brand = tokens[4];
-			rw.subBrand = tokens[5];
-			rw.model = tokens[6];
-			rw.vehicleType = Integer.parseInt(tokens[7]);
-			rw.vehilceColor = Integer.parseInt(tokens[8]);
-			return rw;
-		}
-		else {
-			return null;
-		}
-		 
-	}
 	
-	static class RawData {
-		String path;
-		String plateNo;
-		String plateColor;
-		Box vehiclePos;
-		Box platePos;
-		String brand, subBrand, model;
-		int vehilceColor;
-		int vehicleType;
-	}
-	
-	static class Box  {
-		float x, y, w, h;
-
-		public Box(int x, int y, int w, int h) {
-			super();
-			this.x = x;
-			this.y = y;
-			this.w = w;
-			this.h = h;
-		}
-		
-		public static Box parse(String str) {
-			String tokens[] = str.split(",");
-			return new Box(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3]));
-		}
-	}
 
 }
