@@ -14,27 +14,44 @@ import javax.imageio.ImageIO;
 public class YoloVehicleType {
 
 	public static void main(String[] args) throws IOException {
-		String sourceList = args[0];
-		Path targetPath  = Paths.get(args[1]);
-		Path trainList = targetPath.resolve("train.list");
-		Path valList = targetPath.resolve("val.list");
-		Path lableDir = targetPath.resolve("labels");
+		Path dataset  = Paths.get(args[0]);
+		if (Files.notExists(dataset)) { 
+			System.err.println("cannot find the dataset " + dataset);
+			
+			System.exit(1);  
+		}
+		String sourceList = args[1];
+		
+		Path trainList = dataset.resolve("train.list");
+		Path valList = dataset.resolve("val.list");
+		Path labelDir = dataset.resolve("labels");
+		if (Files.notExists(labelDir)) {
+			Files.createDirectories(labelDir);
+		}
 				
 		BufferedWriter trainWriter = Files.newBufferedWriter(trainList);
 		BufferedWriter valWriter = Files.newBufferedWriter(valList);
-		BufferedReader reader = Files.newBufferedReader(Paths.get(sourceList));
+		BufferedReader reader = Files.newBufferedReader(dataset.resolve(sourceList));
 		String line = null;
 		int counter  = 0;
 		while ( (line = reader.readLine()) != null) {
 			RawData rawData = parse(line);
-			if (rawData != null) {
-				 BufferedImage image = ImageIO.read(new File(rawData.path));
+			if (rawData != null) {				
+				 Path samplePath = dataset.resolve(rawData.path);
+				 if (Files.notExists(samplePath))  {
+					 System.out.println("cannot find file: " + samplePath);
+					 continue;				 
+				 }
+				BufferedImage image = ImageIO.read(samplePath.toFile());
 				 float w = image.getWidth();
 				 float h = image.getHeight();				 
 							 
 				 int i = rawData.path.lastIndexOf(".");
-				 if (i != -1) {
+				 if (i != -1) {					 
 					 String labelName = rawData.path.substring(0, i) + ".txt";
+					 labelName = labelName.replaceFirst("JPEGImages\\/", "");
+					 Path subPath = labelDir.resolve(Paths.get(labelName).subpath(0, 2));
+					 if (Files.notExists(subPath)) Files.createDirectories(subPath);
 					 
 					 // yolo coordinates
 					 float yx = ((2 * rawData.vehiclePos.x + w ) /2 -1 ) / w;
@@ -43,33 +60,42 @@ public class YoloVehicleType {
 					 float yh = rawData.vehiclePos.h / h;
 					 
 					 String outLine = String.format("%d %f %f %f %f", rawData.vehicleType, yx, yy, yw, yh);
-					 BufferedWriter out = Files.newBufferedWriter(lableDir.resolve(labelName));
+					 BufferedWriter out = Files.newBufferedWriter(labelDir.resolve(labelName));
 					 out.write(outLine);
 					 out.flush();
 					 out.close();
 					 
+					 String sample = samplePath.toString();
 					 if (++counter % 6==0) {
-						 valWriter.write(outLine); 
+						 valWriter.write(sample); 
 						 valWriter.newLine();
+						 System.out.format("%8d append val list %s \n", counter, sample);
 					 }
 					 else {
-						 trainWriter.write(outLine); 
+						 trainWriter.write(sample); 
 						 trainWriter.newLine();
-					 }
+						 System.out.format("%8d append train list %s \n", counter, sample);
+					 } 
+					 //System.out.format(" convert %8d samples \n", counter);
+					  
 				 }
 			}
 		}
+		valWriter.flush();
+		valWriter.close();
+		trainWriter.flush();
+		trainWriter.close();
 	}
 	
 	static RawData parse(String line) {
 		
 		String tokens[] = line.split(";", 9);
-		if (tokens.length != 9) {
+		if (tokens.length == 9) {
 			RawData rw = new RawData();
 			rw.path = tokens[0];
-			rw.plateNo = tokens[1]; 
-			rw.vehiclePos = Box.parse(tokens[2]);
-			rw.platePos = Box.parse(tokens[3]);
+			rw.vehiclePos = Box.parse(tokens[1]);
+			rw.platePos = Box.parse(tokens[2]);
+			rw.plateNo = tokens[3]; 
 			rw.brand = tokens[4];
 			rw.subBrand = tokens[5];
 			rw.model = tokens[6];

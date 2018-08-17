@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +32,7 @@ public class ExportPlate {
 
 	void export() throws Exception {
 		String sql = "select id, path, plate_nbr, plate_position from vehicle_dataset where plate_nbr != '车牌'"
-				+ "and plate_nbr not regexp '^[ABCDEFGHIJKLMNOPQRSTUVXYZ].+'";
+				+ "and plate_nbr not regexp '^[ABCDEFGHIJKLMNOPQRSTUVXYZ].+' limit 10000";
 		ResultSet rs = conn.createStatement().executeQuery(sql);
 		while (rs.next()) {
 			long id = rs.getLong("id");
@@ -78,15 +77,26 @@ public class ExportPlate {
 			try {
 				BufferedImage image = ImageIO.read(source.toFile());
 				String normalName = String.format("%s_%08d.JPG", plateNbr, id);
+				Path target = sub.resolve(sub).resolve(normalName);
+				if (Files.exists(target)) return;
 				String tokens[] = platePosistion.split("[\\s,]", 4);
 				if (tokens.length == 4) {
 					int x = Integer.valueOf(tokens[0]);
 					int y = Integer.valueOf(tokens[1]);
 					int w = Integer.valueOf(tokens[2]);
 					int h = Integer.valueOf(tokens[3]);
-					BufferedImage subImage = image.getSubimage(x, y, w, h);
-					Path target = sub.resolve(sub).resolve(normalName);
-					ImageIO.write(subImage, "jpg", target.toFile());
+					if (x>5 && y>5) {
+						x -=5;
+						y -=5;
+						if (x + w + 10 < image.getWidth()) {
+							w +=10;
+							if (y + h +10 < image.getHeight()) {
+								h +=10;
+								BufferedImage subImage = image.getSubimage(x, y, w, h);
+								ImageIO.write(subImage, "jpg", target.toFile());
+							}
+						}
+					}
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -94,7 +104,7 @@ public class ExportPlate {
 		}
 	}
 
-	public static void main(String[] args) {
-
+	public static void main(String[] args) throws NumberFormatException, Exception {
+		new ExportPlate(args[0], Integer.valueOf(args[1])).export();
 	}
 }

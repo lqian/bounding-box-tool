@@ -116,25 +116,25 @@ public class HierarchyBrand {
 		while (rs.next()) {
 			int brand = rs.getInt(1);
 			brands.add(brand);
-//			list.write(String.format("b%04d000000\n", brand));
+			list.write(String.format("b%04d000000\n", brand));
 			tree.write(String.format("b%04d000000 -1\n", brand));
-//			pstm1.setInt(1, brand);
-//			ResultSet rs1 = pstm1.executeQuery();
-//			if (rs1.next()) {
-//				String subBrandNameEng = rs1.getString(1);
-//				String[] tokens = subBrandNameEng.split("_", 4);
-//				names.write(tokens[0] + "_" + tokens[1] + "_" + tokens[2]);
-//				names.newLine();
-//			}
-//			else {
-//				names.write(String.format("b%04d000000\n", brand));
-//			}
-//			rs1.close();
+			pstm1.setInt(1, brand);
+			ResultSet rs1 = pstm1.executeQuery();
+			if (rs1.next()) {
+				String subBrandNameEng = rs1.getString(1);
+				String[] tokens = subBrandNameEng.split("_", 4);
+				names.write(tokens[0] + "_" + tokens[1] + "_" + tokens[2]);
+				names.newLine();
+			}
+			else {
+				names.write(String.format("b%04d000000\n", brand));
+			}
+			rs1.close();
 		}
 		rs.close();
 		tree.flush();
-//		names.flush();
-//		list.flush();
+		names.flush();
+		list.flush();
 		int rows = brands.size();
 
 		List<Integer> subBrands = new ArrayList<>();
@@ -150,8 +150,8 @@ public class HierarchyBrand {
 				int subBrand = rs.getInt(1);
 				subBrands.add(subBrand);
 				tree.write(String.format("b%04d%03d000 %d\n", brand, subBrand, i));
-//				list.write(String.format("b%04d%03d000\n", brand, subBrand));
-//				names.write(rs.getString(2)); names.newLine();
+				list.write(String.format("b%04d%03d000\n", brand, subBrand));
+				names.write(rs.getString(2)); names.newLine();
 			}
 			rs.close();
 			 
@@ -188,5 +188,6 @@ public class HierarchyBrand {
 		list.flush();
 		tree.close();
 		conn.close();
+		System.out.println("create config data done");
 	}
 }
