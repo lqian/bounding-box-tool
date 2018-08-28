@@ -33,6 +33,7 @@ public class ExportPlate {
 	void export() throws Exception {
 		String sql = "select id, path, plate_nbr, plate_position from vehicle_dataset where plate_nbr != '车牌'"
 				+ "and plate_nbr not regexp '^[ABCDEFGHIJKLMNOPQRSTUVXYZ].+' limit 10000";
+ 
 		ResultSet rs = conn.createStatement().executeQuery(sql);
 		while (rs.next()) {
 			long id = rs.getLong("id");
@@ -85,7 +86,7 @@ public class ExportPlate {
 					int y = Integer.valueOf(tokens[1]);
 					int w = Integer.valueOf(tokens[2]);
 					int h = Integer.valueOf(tokens[3]);
-					if (x>5 && y>5) {
+					if (x>5 && y>5) { 
 						x -=5;
 						y -=5;
 						if (x + w + 10 < image.getWidth()) {
@@ -93,6 +94,7 @@ public class ExportPlate {
 							if (y + h +10 < image.getHeight()) {
 								h +=10;
 								BufferedImage subImage = image.getSubimage(x, y, w, h);
+ 
 								ImageIO.write(subImage, "jpg", target.toFile());
 							}
 						}

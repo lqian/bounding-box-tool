@@ -50,34 +50,33 @@ public class HierarchyBrand {
 		Connection conn = ExportBrand.createConn();
 		Statement stm = conn.createStatement();
 		PreparedStatement pstm = conn.prepareStatement(
-				"select id from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
+				"select path from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
 		ResultSet rs = stm
 				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset vd join brand_dictionary bd"
 						+ " on vehicle_brand = brand and vehicle_sub_brand = subBrand and vehicle_model = model"
 						+ " group by vehicle_brand, vehicle_sub_brand, vehicle_model");
-		BufferedWriter train = Files.newBufferedWriter(Paths.get("train.list"));
-		BufferedWriter valid = Files.newBufferedWriter(Paths.get("valid.list"));
+		BufferedWriter train = Files.newBufferedWriter(Paths.get("vehicle-brand-train.list"));
+		BufferedWriter valid = Files.newBufferedWriter(Paths.get("vehicle-brand-val.list"));
 		while (rs.next()) {
 			int brand = rs.getInt(1);
 			int subBrand = rs.getInt(2);
 			int model = rs.getInt(3);
 			int total = rs.getInt(4);
-			fill(pstm, train, valid, brand, subBrand, model, total >= 3000);
-			System.out.format("fill brand: %d subBrand: %d model: %d total:%d\n", brand, subBrand, model, total);
-
+			fill(pstm, train, valid, brand, subBrand, model, total >= 6000);
+			System.out.format("fill brand: %d subBrand: %03d model: %03d total:%d\n", brand, subBrand, model, total);
+			train.flush();
+			valid.flush();
 		}
 		rs.close();
 		conn.close();
-		train.flush();
 		train.close();
-		valid.flush();
 		valid.close();
 
 	}
 
 	private static void fill(PreparedStatement pstm, BufferedWriter train, BufferedWriter valid, int brand,
 			int subBrand, int model, boolean bigger) throws Exception {
-		String token = String.format("/%04d/", brand);
+		//String token = String.format("/%04d/", brand);
 		pstm.setInt(1, brand);
 		pstm.setInt(2, subBrand);
 		pstm.setInt(3, model);
@@ -85,18 +84,36 @@ public class HierarchyBrand {
 		int counter = 0;
 
 		while (rs.next()) {
-			long id = rs.getLong(1);
+			String path = rs.getString(1);
+			//long id = rs.getLong(1);
 			if (bigger && counter <= 1000 || 
-					counter % 3 == 0) {
-				appendList(valid, brand, subBrand, model, id);
-			} else {
-				appendList(train, brand, subBrand, model, id);
+					counter % 6 == 0) {
+//				appendList(valid, brand, subBrand, model, id);
+				appendList(valid, path)
+;			} else {
+				// appendList(train, brand, subBrand, model, id);
+				appendList(train,  path);
 			}
 			counter++;
 		}
 
 	}
+	
+	static void appendList(BufferedWriter writer, String sample) throws IOException {
+		writer.write(sample);
+		writer.newLine();
+	}
 
+	/**
+	 * @deprecated
+	 * @param writer
+	 * @param brand
+	 * @param subBrand
+	 * @param model
+	 * @param id
+	 * @throws IOException
+	 */
+	@SuppressWarnings("unused")
 	private static void appendList(BufferedWriter writer, int brand, int subBrand, int model, long id) throws IOException {
 		writer.write(Util.normal(brand, subBrand, model, id));
 		writer.newLine();
@@ -104,9 +121,9 @@ public class HierarchyBrand {
 
 	static void createConfigData() throws ClassNotFoundException, SQLException, IOException {
 		Connection conn = ExportBrand.createConn();
-		BufferedWriter tree = Files.newBufferedWriter(Paths.get("brand.tree"));
-		BufferedWriter list = Files.newBufferedWriter(Paths.get("brand.list"));
-		BufferedWriter names = Files.newBufferedWriter(Paths.get("brand.names"));
+		BufferedWriter tree = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.tree"));
+		BufferedWriter list = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.labels"));
+		BufferedWriter names = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.names"));
 //		String sql = "select distinct brand from vehicle_brand where brand=1028";
 		String sql = "select distinct brand from vehicle_brand";
 		ResultSet rs = conn.createStatement().executeQuery(sql);
