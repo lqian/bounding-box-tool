@@ -138,6 +138,7 @@ public class MainWindow implements WindowListener {
 	private JButton btnFindByClazz;
 	private JButton btnFilter;
 	private JButton btnSave;
+	private JButton btnVehicleBrand;
 	private JButton btnCorp;
 	private JButton btnAbout;
 	
@@ -155,6 +156,7 @@ public class MainWindow implements WindowListener {
 	JPanel cards = new JPanel(cardLayout);
 	JPanel annotationPanel = new JPanel(new BorderLayout());
 	ClassificationPanel classificationPanel = new ClassificationPanel();
+	BrandPanel brandPanel = new BrandPanel();
 	
 
 	/**
@@ -460,6 +462,17 @@ public class MainWindow implements WindowListener {
 				}
 			}
 		});
+		
+		this.btnVehicleBrand.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				cardLayout.show(cards, "brandPanel");
+				//brandPanel.updateUI();
+			}
+			
+		});
 	}
 
 	void buildClassificationPanel() {
@@ -548,6 +561,11 @@ public class MainWindow implements WindowListener {
 		toolBar.add(btnOpenClazz);
 
 		toolBar.addSeparator();
+		btnVehicleBrand = new JButton(icon("vehicle.png", "correct vehicle brand"));
+		btnVehicleBrand.setToolTipText("correct vehicle brand");
+		toolBar.add(btnVehicleBrand);
+		
+		toolBar.addSeparator();
 		btnAbout = new JButton(icon("about.gif", ""));
 		toolBar.add(btnAbout);
 
@@ -556,6 +574,7 @@ public class MainWindow implements WindowListener {
 		
 		cards.add(annotationPanel, "annotationPanel");
 		cards.add(classificationPanel, "classificationPanel");
+		cards.add(brandPanel, "brandPanel");
 		
 		btnRemoveBoundingBox = new JButton("Remove");
 		btnCleanBoundingBox = new JButton("Clear All");

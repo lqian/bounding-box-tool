@@ -27,7 +27,7 @@ public class ExportPlate {
 	public ExportPlate(String target, int threadNums) throws Exception {
 		this.target = Paths.get(target);
 		service = Executors.newFixedThreadPool(threadNums);
-		conn = ExportBrand.createConn();
+		conn = Util.createConn();
 	}
 
 	void export() throws Exception {

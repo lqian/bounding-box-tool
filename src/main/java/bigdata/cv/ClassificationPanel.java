@@ -16,7 +16,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -36,8 +35,6 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 
@@ -76,6 +73,7 @@ public class ClassificationPanel extends JPanel {
 	private static final long serialVersionUID = 3232368214975648611L;
 
 	public ClassificationPanel() {
+		
 		super();
 
 		setLayout(boderLayout); 
@@ -94,7 +92,8 @@ public class ClassificationPanel extends JPanel {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				dataModel.removeSelected();			}
+				dataModel.removeSelected();			
+			}
 			
 		}); 
 		
@@ -126,14 +125,12 @@ public class ClassificationPanel extends JPanel {
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				
-				
 				int oc = dataModel.getRowCount();
 				int nc = (Integer)spRows.getValue();
 				if (oc != nc) {
 					initTable(nc, (Integer) spCols.getValue());
 				}
 			}
-			
 		});
 		
 		
@@ -211,7 +208,6 @@ public class ClassificationPanel extends JPanel {
 	}
 
 	private void initTable(int rows, int cols) {
-		
 		if (imageTable != null) {
 			remove(imageTable);
 		}
@@ -335,7 +331,6 @@ public class ClassificationPanel extends JPanel {
 	void pageDown() {
 		currentIndex += dataModel.getRowCount() * dataModel.getColumnCount();
 		dataModel.clean();
-		
 	}
 	
 	void pageUp() {

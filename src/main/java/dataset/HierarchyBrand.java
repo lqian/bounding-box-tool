@@ -47,7 +47,7 @@ public class HierarchyBrand {
 	}
 
 	private static void createTrainValList() throws Exception {
-		Connection conn = ExportBrand.createConn();
+		Connection conn = Util.createConn();
 		Statement stm = conn.createStatement();
 		PreparedStatement pstm = conn.prepareStatement(
 				"select path from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
@@ -120,7 +120,7 @@ public class HierarchyBrand {
 	}
 
 	static void createConfigData() throws ClassNotFoundException, SQLException, IOException {
-		Connection conn = ExportBrand.createConn();
+		Connection conn = Util.createConn();
 		BufferedWriter tree = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.tree"));
 		BufferedWriter list = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.labels"));
 		BufferedWriter names = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.names"));

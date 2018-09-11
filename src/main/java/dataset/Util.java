@@ -3,6 +3,10 @@
  */
 package dataset;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
 import dataset.ExportBrand.BrandEntity;
 
 /**
@@ -22,5 +26,14 @@ public class Util {
 	public static void  main(String[] args) {
 		System.out.println(normal(1,2,3,4L));
 	}
+	
+	public static Connection createConn() throws ClassNotFoundException, SQLException {
+		Class.forName("com.mysql.jdbc.Driver");
+		Connection conn = DriverManager.getConnection(
+				"jdbc:mysql://localhost:3306/corpus?useUnicode=yes&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true",
+				"root", "");
+		return conn;
+	}
+	
 
 }

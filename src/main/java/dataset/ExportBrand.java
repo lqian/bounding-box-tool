@@ -43,7 +43,7 @@ public class ExportBrand {
 	public static void main(String[] args) throws Exception {
 		home = args.length > 0 ? Paths.get(args[0]) : Paths.get("vehicle-brand-dataset");
 
-		Connection conn = createConn();
+		Connection conn = Util.createConn();
 		// conn.setAutoCommit(false);
 
 		String summarizeSQL = "select distinct vehicle_brand, vehicle_sub_brand, vehicle_model from vehicle_dataset";
@@ -96,13 +96,7 @@ public class ExportBrand {
 		
 	}
 
-	static Connection createConn() throws ClassNotFoundException, SQLException {
-		Class.forName("com.mysql.jdbc.Driver");
-		Connection conn = DriverManager.getConnection(
-				"jdbc:mysql://localhost:3306/corpus?useUnicode=yes&characterEncoding=utf8&rewriteBatchedStatements=true",
-				"root", "123456");
-		return conn;
-	}
+	
 
 	static class Corp implements Runnable {
 		
