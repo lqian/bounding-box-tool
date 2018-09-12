@@ -20,10 +20,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -40,6 +44,7 @@ import dataset.Util;
  * @author link
  *
  */
+
 public class BrandPanel extends JPanel {
 
 	/**
@@ -56,21 +61,23 @@ public class BrandPanel extends JPanel {
 	JPanel northPanel = new JPanel();
 	JPanel centerPanel = new JPanel();
 	JPanel eastPanel = new JPanel();
+	JPanel southPanel = new JPanel();
 
 	GridLayout grid = new GridLayout(1, 6);
-	JTextField txtfullBrand = new JTextField("1105003002");
+	JTextField txtfullBrand = new JTextField("1120016002");
 	JButton btnSearch = new JButton("search");
+	JButton btnRemoveInvalid = new JButton("Remove Invalid Path Sample");
 	List<PlateEntiy> plateEntities = new ArrayList<>();
 
 	DefaultTableModel tableModel; 
 	 
-	Connection conn ;
+	Connection conn = null;
 	
 	Path root = Paths.get("/train-data/vehicle-brand-dataset");
 
 	private DefaultTableModel tableModel1;
 	
-	String _plateNo ="";
+	String _plateNo = "";
 	String _plateColor = "";
 
 	private PreparedStatement pstm;
@@ -78,26 +85,44 @@ public class BrandPanel extends JPanel {
 	private ResultSet updatableSet;
 	
 	private JButton btnCorrect = new JButton("correct");
-	JButton btnDelete = new JButton("Remove All Sample");
+	JButton btnDeleteAll = new JButton("Remove All Sample");
+	JButton btnDeleteOne = new JButton("Remove One");
 	JButton btnNext = new JButton(">>");
 	JButton btnPre = new JButton("<<");
+	
+	Set<String> recentUsed = new HashSet<>();
+	
+	
+	JComboBox<String>  cbOtherFullBrand = new JComboBox<>();
+	DefaultComboBoxModel<String> cbModel = new DefaultComboBoxModel<>();
+	
+	JTextField otherFullBrand = new JTextField("6000001000");
+	JButton btnOther = new JButton("use other");
 
 	private String path;
+	
+	JLabel lblStatus = new JLabel();
 	
 	SimpleImagePanel imagePanel = new SimpleImagePanel();
 	
 	@SuppressWarnings("serial")
-	public BrandPanel() {
+	public BrandPanel()  {
 		super();
+		
+		
 		//		northPanel.setLayout(grid);
 		northPanel.add(new JLabel("full brand code:"));
 		northPanel.add(txtfullBrand);		
 		northPanel.add(btnSearch);
+		northPanel.add(btnRemoveInvalid);
+		
+		southPanel.add(lblStatus);
 		
 		setLayout(boderLayout);
 		add(northPanel, BorderLayout.NORTH);
 		add(centerPanel, BorderLayout.CENTER);
 		add(eastPanel, BorderLayout.EAST);
+		add(southPanel, BorderLayout.SOUTH);
 
 		tableModel = new DefaultTableModel(null, new String []{ "Plate No", "plate color", "Count", "Corrected" }) {
 			@Override
@@ -112,9 +137,11 @@ public class BrandPanel extends JPanel {
 		plateNoTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);	 
 		JScrollPane scrollPane = new JScrollPane(plateNoTable);
 		centerPanel.add(scrollPane);
-		scrollPane.setSize(centerPanel.getSize());
+		//scrollPane.setSize(centerPanel.getSize());
 		
 		btnSearch.addActionListener(new SearchAction());
+		btnRemoveInvalid.addActionListener(new RemoveInvalidPathListener());
+		
 		plateNoTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
 			@Override
@@ -148,11 +175,17 @@ public class BrandPanel extends JPanel {
 			}
 		};
 		
+		cbOtherFullBrand.setModel(cbModel);
+		cbOtherFullBrand.setEditable(true);
+		
 		eastPanel.setLayout(new BorderLayout());
 		JPanel pn = new JPanel();
 		eastPanel.add(pn, BorderLayout.NORTH);
 		pn.add(btnCorrect);
-		pn.add(btnDelete);
+		pn.add(btnDeleteAll);
+		pn.add(btnDeleteOne);
+		pn.add(cbOtherFullBrand);
+		pn.add(btnOther);
 		
 		JPanel pc = new JPanel();
 		pc.setLayout(new GridLayout(2,1));
@@ -178,15 +211,15 @@ public class BrandPanel extends JPanel {
 				if (sidx == -1) return ;
 				String code = (String)tableModel1.getValueAt(sidx, 0);
 				int brand = Integer.parseInt(code.substring(0, 4));
-				int subbrand = Integer.parseInt(code.substring( 4, 7));
+				int subbrand = Integer.parseInt(code.substring(4, 7));
 				int model = Integer.parseInt(code.substring(7));
 				try {
 					correctBrand(_plateNo, _plateColor, brand, subbrand, model);
 					int idx = plateNoTable.getSelectedRow();
 					if (idx < tableModel.getRowCount() -1) {
-						int from = idx++;
-						int end = idx++;
-						//plateNoTable.setRowSelectionInterval(idx, idx);
+						int next = ++idx;
+						 
+						plateNoTable.setRowSelectionInterval(next, next);
 						//plateNoTable.changeSelection(from, end, false, false);
 					}
 				} catch (Exception e1) {
@@ -195,7 +228,7 @@ public class BrandPanel extends JPanel {
 			}
 		});
 		
-		btnDelete.addActionListener(new ActionListener() {
+		btnDeleteAll.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -211,20 +244,87 @@ public class BrandPanel extends JPanel {
 					} while (updatableSet.next());
 					updatableSet.close();
 					
-					int row = plateNoTable.getSelectedRow();
-					tableModel.removeRow(row);
-					if (row < tableModel.getRowCount() -1) {
-						int end = row++;
-						//plateNoTable.setRowSelectionInterval(row, row);
-						//plateNoTable.changeSelection(row, end, false, false);
-					}
-					
 					while (tableModel1.getRowCount() > 0) {
 						tableModel1.removeRow(0);
 					}
 					
+					
+					int row = plateNoTable.getSelectedRow();
+					tableModel.removeRow(row);
+					
+					if (row < tableModel.getRowCount() -1) {
+						int next = (row++);
+						plateNoTable.setRowSelectionInterval(next, next);
+						//plateNoTable.changeSelection(row, end, false, false);
+					}
+					
+					
+					
 				} catch (Exception e1) {
-					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		});
+		
+		btnDeleteOne.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				int sidx = brandsTable.getSelectionModel().getMinSelectionIndex();
+				if (sidx == -1) return ;
+				String code = (String)tableModel1.getValueAt(sidx, 0);
+				int brand = Integer.parseInt(code.substring(0, 4));
+				int subbrand = Integer.parseInt(code.substring(4, 7));
+				int model = Integer.parseInt(code.substring(7));
+
+				try {
+					updatableSet.first();
+					do {
+						int ob = updatableSet.getInt("vehicle_brand");
+						int osb = updatableSet.getInt("vehicle_sub_brand");
+						int om = updatableSet.getInt("vehicle_model");
+
+						if (brand == ob && subbrand == osb && model == om) {
+							String file = updatableSet.getString("path");
+							Path p = Paths.get(file);
+							if (Files.exists(p)) {
+								Files.delete(p);
+							}
+							updatableSet.deleteRow();
+						}
+					} while (updatableSet.next());
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+				
+				tableModel1.removeRow(sidx);
+			}
+		});
+		
+		btnOther.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String code = (String)cbOtherFullBrand.getSelectedItem();
+				
+				if (!recentUsed.contains(code) ) {
+					recentUsed.add(code);					
+					cbOtherFullBrand.addItem(code);					
+				}
+				
+				int brand = Integer.parseInt(code.substring(0, 4));
+				int subbrand = Integer.parseInt(code.substring(4, 7));
+				int model = Integer.parseInt(code.substring(7));
+				try {
+					correctBrand(_plateNo, _plateColor, brand, subbrand, model);
+					int idx = plateNoTable.getSelectedRow();
+					if (idx < tableModel.getRowCount() -1) {
+						int next = ++idx;
+						 
+						plateNoTable.setRowSelectionInterval(next, next);
+						//plateNoTable.changeSelection(from, end, false, false);
+					}
+				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
 			}
@@ -295,6 +395,10 @@ public class BrandPanel extends JPanel {
 			tableModel1.addRow(new Object[] {be.fullBrandCode, be.fullBrandName, be.count});
 		}
 		rs.close();
+		
+		if (tableModel1.getRowCount() == 0) {
+			 brandsTable.setRowSelectionInterval(0, 0);
+		}
 
 		Statement stm = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
 		updatableSet = stm.executeQuery("select id, path, vehicle_brand, vehicle_sub_brand, "
@@ -350,30 +454,38 @@ public class BrandPanel extends JPanel {
 		this.updatableSet.first();	
 		do {
 			Path p = Paths.get(updatableSet.getString("path"));
+			int ob = updatableSet.getInt("vehicle_brand");
+			int osb = updatableSet.getInt("vehicle_sub_brand");
+			int m = updatableSet.getInt("vehicle_model");
+
 			if (Files.exists(p)) {
-				Path root = p.getParent().getParent().getParent().getParent();
-				String baseName = p.getFileName().toString();
-				String newName = newCode + baseName.substring(11);
-				Path sub = root.resolve(String.format("%04d/%03d/%03d", brand, subBrand, model)); 
-				if (Files.notExists(sub )) {
-					Files.createDirectories(sub);
+
+				if (!( ob == brand  && osb == subBrand && m == model  )) { 
+
+					Path root = p.getParent().getParent().getParent().getParent();
+					String baseName = p.getFileName().toString();
+					String newName = newCode + baseName.substring(11);
+					Path sub = root.resolve(String.format("%04d/%03d/%03d", brand, subBrand, model)); 
+					if (Files.notExists(sub )) {
+						Files.createDirectories(sub);
+					}
+					Path tp = sub.resolve(newName);
+					Files.move(p, tp);
+					updatableSet.updateInt("vehicle_brand", brand);
+					updatableSet.updateInt("vehicle_sub_brand", subBrand);
+					updatableSet.updateInt("vehicle_model", model);
+					updatableSet.updateString("path", tp.toString()); 
 				}
-				Path tp = sub.resolve(newName);
-				Files.move(p, tp);
-				updatableSet.updateInt("vehicle_brand", brand);
-				updatableSet.updateInt("vehicle_sub_brand", subBrand);
-				updatableSet.updateInt("vehicle_model", model);
-				updatableSet.updateString("path", tp.toString()); 
 				updatableSet.updateInt("corrected", 1);
 				updatableSet.updateRow();
 			}
 			else {
 				updatableSet.deleteRow();
 			}
-		}while (updatableSet.next()) ;
-//		conn.commit();
+		} while (updatableSet.next()) ;
+		//		conn.commit();
 		updatableSet.close();
-		 
+
 		int psi = this.plateNoTable.getSelectedRow();
 		tableModel.setValueAt(true, psi, 3);
 		while (tableModel1.getRowCount() > 0) {
@@ -399,6 +511,43 @@ public class BrandPanel extends JPanel {
 			}
 		}
 	}
+	
+	class RemoveInvalidPathListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			Thread t = new Thread() {
+
+				@Override
+				public void run() {
+					String fullbrand = txtfullBrand.getText();
+					int brand = Integer.parseInt(fullbrand.substring(0, 4));
+					int subbrand = Integer.parseInt(fullbrand.substring(4, 7));
+					int model = Integer.parseInt(fullbrand.substring(7,10));
+
+					try {
+						if (conn == null) {
+							conn = Util.createConn();
+						}
+						Statement stm = BrandPanel.this.conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+						ResultSet rs = stm.executeQuery(String.format("select id, path from vehicle_dataset where vehicle_brand=%d and vehicle_sub_brand=%d and vehicle_model=%d", brand, subbrand, model));
+						while (rs.next()) {
+							Path p = Paths.get(rs.getString("path"));
+							if (Files.notExists(p)) {
+								rs.deleteRow();
+								lblStatus.setText(p.toString());
+							}
+						}
+						rs.close();
+						stm.close();
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
+			};
+			t.start();
+		}
+	}
 
 	class PlateEntiy {
 		public String plateNo;
@@ -414,6 +563,7 @@ public class BrandPanel extends JPanel {
 		
 	}
 	
+	@SuppressWarnings("serial")
 	class SimpleImagePanel extends JPanel{
 
 		String name; 
