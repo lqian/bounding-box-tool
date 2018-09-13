@@ -31,6 +31,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
@@ -52,16 +53,11 @@ public class BrandPanel extends JPanel {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	BorderLayout boderLayout = new BorderLayout(10, 10);
 
 	JTable plateNoTable;
 
 	JTable brandsTable;
-
-	JPanel northPanel = new JPanel();
-	JPanel centerPanel = new JPanel();
-	JPanel eastPanel = new JPanel();
-	JPanel southPanel = new JPanel();
+	
 
 	GridLayout grid = new GridLayout(1, 6);
 	JTextField txtfullBrand = new JTextField("1120016002");
@@ -109,6 +105,11 @@ public class BrandPanel extends JPanel {
 	public BrandPanel()  {
 		super();
 		
+		JPanel northPanel = new JPanel();
+		JPanel centerPanel = new JPanel();
+		JPanel eastPanel = new JPanel();
+		JPanel southPanel = new JPanel();
+		
 		
 		//		northPanel.setLayout(grid);
 		northPanel.add(new JLabel("full brand code:"));
@@ -118,11 +119,13 @@ public class BrandPanel extends JPanel {
 		
 		southPanel.add(lblStatus);
 		
-		setLayout(boderLayout);
+		setLayout(new BorderLayout(10, 10));
 		add(northPanel, BorderLayout.NORTH);
-		add(centerPanel, BorderLayout.CENTER);
-		add(eastPanel, BorderLayout.EAST);
+//		add(centerPanel, BorderLayout.CENTER);
+//		add(eastPanel, BorderLayout.EAST);
 		add(southPanel, BorderLayout.SOUTH);
+		
+		
 
 		tableModel = new DefaultTableModel(null, new String []{ "Plate No", "plate color", "Count", "Corrected" }) {
 			@Override
@@ -132,12 +135,20 @@ public class BrandPanel extends JPanel {
 		};
 
 		plateNoTable = new JTable(tableModel);
-		plateNoTable.setAutoscrolls(false);
+		plateNoTable.setAutoscrolls(true);
 		plateNoTable.setDragEnabled(false);
 		plateNoTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);	 
 		JScrollPane scrollPane = new JScrollPane(plateNoTable);
-		centerPanel.add(scrollPane);
-		//scrollPane.setSize(centerPanel.getSize());
+		centerPanel.setLayout(new BorderLayout(10, 10));
+		//plateNoTable.setFillsViewportHeight(true);
+		centerPanel.add(scrollPane, BorderLayout.CENTER);
+		//plateNoTable.setSize(centerPanel.getSize());
+		//scrollPane.setPreferredSize(centerPanel.getPreferredSize());
+		
+		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+				scrollPane, eastPanel);
+		splitPane.setResizeWeight(.7);
+		add(splitPane, BorderLayout.CENTER);
 		
 		btnSearch.addActionListener(new SearchAction());
 		btnRemoveInvalid.addActionListener(new RemoveInvalidPathListener());
@@ -228,43 +239,7 @@ public class BrandPanel extends JPanel {
 			}
 		});
 		
-		btnDeleteAll.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					updatableSet.first();
-					do {
-						String file = updatableSet.getString("path");
-						Path p = Paths.get(file);
-						if (Files.exists(p)) {
-							Files.delete(p);
-						}
-						updatableSet.deleteRow();
-					} while (updatableSet.next());
-					updatableSet.close();
-					
-					while (tableModel1.getRowCount() > 0) {
-						tableModel1.removeRow(0);
-					}
-					
-					
-					int row = plateNoTable.getSelectedRow();
-					tableModel.removeRow(row);
-					
-					if (row < tableModel.getRowCount() -1) {
-						int next = (row++);
-						plateNoTable.setRowSelectionInterval(next, next);
-						//plateNoTable.changeSelection(row, end, false, false);
-					}
-					
-					
-					
-				} catch (Exception e1) {
-					e1.printStackTrace();
-				}
-			}
-		});
+		btnDeleteAll.addActionListener(new DeleteAllAction() );
 		
 		btnDeleteOne.addActionListener(new ActionListener() {
 
@@ -285,12 +260,8 @@ public class BrandPanel extends JPanel {
 						int om = updatableSet.getInt("vehicle_model");
 
 						if (brand == ob && subbrand == osb && model == om) {
-							String file = updatableSet.getString("path");
-							Path p = Paths.get(file);
-							if (Files.exists(p)) {
-								Files.delete(p);
-							}
-							updatableSet.deleteRow();
+							updatableSet.updateInt("deprecated", 1);
+							updatableSet.updateRow();
 						}
 					} while (updatableSet.next());
 				} catch (Exception e1) {
@@ -396,13 +367,14 @@ public class BrandPanel extends JPanel {
 		}
 		rs.close();
 		
-		if (tableModel1.getRowCount() == 0) {
-			 brandsTable.setRowSelectionInterval(0, 0);
+		int r = tableModel1.getRowCount();
+		if (r > 0) {
+			brandsTable.setRowSelectionInterval(r-1, r-1);
 		}
 
 		Statement stm = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
 		updatableSet = stm.executeQuery("select id, path, vehicle_brand, vehicle_sub_brand, "
-				+ "vehicle_model, corrected from vehicle_dataset where plate_nbr='" + _plateNo + "' and plate_color=" + _plateColor);
+				+ "vehicle_model, corrected, deprecated from vehicle_dataset where plate_nbr='" + _plateNo + "' and plate_color=" + _plateColor);
 
 		// rand 1 pictures
 		boolean found = false;
@@ -417,6 +389,11 @@ public class BrandPanel extends JPanel {
 	}
 	
 	public void initData() throws ClassNotFoundException, SQLException {
+		while (tableModel.getRowCount() > 0) {
+			tableModel.removeRow(0);
+		}
+		//this.plateNoTable.removeAll();
+		
 		conn = Util.createConn();
 		String fullbrand = this.txtfullBrand.getText();
 		int brand = Integer.parseInt(fullbrand.substring(0, 4));
@@ -425,7 +402,8 @@ public class BrandPanel extends JPanel {
 		
 		Statement stm = conn.createStatement();
 		String sql = String.format("select count(1) total, plate_nbr, plate_color "
-				+ " from vehicle_dataset where vehicle_brand=%d and vehicle_sub_brand=%d and vehicle_model=%d and corrected=0"
+				+ " from vehicle_dataset where vehicle_brand=%d and vehicle_sub_brand=%d and vehicle_model=%d and corrected=0 "
+				+ " and deprecated=0 "
 				+ " group by plate_nbr, plate_color order by count(1) desc ", brand, subbrand, model);
 		
 		ResultSet rs = stm.executeQuery(sql);
@@ -445,7 +423,7 @@ public class BrandPanel extends JPanel {
 				+ " vehicle_model, fullNameCN, count(1) as total"
 				+ " from vehicle_dataset d left join brand_dictionary b "
 				+ " on vehicle_brand=brand and vehicle_sub_brand = subbrand and vehicle_model=model"
-				+ " where plate_nbr=? and plate_color=? group by  vehicle_brand, vehicle_sub_brand, vehicle_model,fullNameCN order by count(1)");
+				+ " where plate_nbr=? and plate_color=? and deprecated = 0 group by  vehicle_brand, vehicle_sub_brand, vehicle_model,fullNameCN order by count(1)");
 	}
 	
 	void correctBrand(String plateNo, String plateColor, int brand, int subBrand, int model) throws Exception {
@@ -457,11 +435,11 @@ public class BrandPanel extends JPanel {
 			int ob = updatableSet.getInt("vehicle_brand");
 			int osb = updatableSet.getInt("vehicle_sub_brand");
 			int m = updatableSet.getInt("vehicle_model");
-
+			int d = updatableSet.getInt("deprecated");
+			
+			if (d == 1) continue;
 			if (Files.exists(p)) {
-
 				if (!( ob == brand  && osb == subBrand && m == model  )) { 
-
 					Path root = p.getParent().getParent().getParent().getParent();
 					String baseName = p.getFileName().toString();
 					String newName = newCode + baseName.substring(11);
@@ -587,4 +565,43 @@ public class BrandPanel extends JPanel {
 			this.name = name; 
 		}
 	}
+	
+	class DeleteAllAction implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			try {
+				updatableSet.first();
+				do {
+//					String file = updatableSet.getString("path");
+//					Path p = Paths.get(file);
+//					if (Files.exists(p)) {
+//						Files.delete(p);
+//					}
+					updatableSet.updateInt("deprecated", 1);
+					updatableSet.updateRow();
+				} while (updatableSet.next());
+				updatableSet.close();
+				
+				while (tableModel1.getRowCount() > 0) {
+					tableModel1.removeRow(0);
+				}
+				
+				
+				int row = plateNoTable.getSelectedRow();
+				tableModel.removeRow(row);
+				
+				if (row < tableModel.getRowCount() -1) {
+					int next = (row++);
+					plateNoTable.setRowSelectionInterval(next, next);
+					//plateNoTable.changeSelection(row, end, false, false);
+				}
+				
+				
+				
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
+	
 }

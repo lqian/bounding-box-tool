@@ -50,7 +50,7 @@ public class HierarchyBrand {
 		Connection conn = Util.createConn();
 		Statement stm = conn.createStatement();
 		PreparedStatement pstm = conn.prepareStatement(
-				"select path from vehicle_dataset where vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
+				"select path from vehicle_dataset where deprecated=0 and vehicle_brand=? and vehicle_sub_brand=? and vehicle_model=?");
 		ResultSet rs = stm
 				.executeQuery("select vehicle_brand, vehicle_sub_brand, vehicle_model, count(1) from vehicle_dataset vd join brand_dictionary bd"
 						+ " on vehicle_brand = brand and vehicle_sub_brand = subBrand and vehicle_model = model"
@@ -121,9 +121,9 @@ public class HierarchyBrand {
 
 	static void createConfigData() throws ClassNotFoundException, SQLException, IOException {
 		Connection conn = Util.createConn();
-		BufferedWriter tree = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.tree"));
-		BufferedWriter list = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.labels"));
-		BufferedWriter names = Files.newBufferedWriter(Paths.get("vehicle-brand-5676.names"));
+		BufferedWriter tree = Files.newBufferedWriter(Paths.get("vehicle-brand.tree"));
+		BufferedWriter list = Files.newBufferedWriter(Paths.get("vehicle-brand.labels"));
+		BufferedWriter names = Files.newBufferedWriter(Paths.get("vehicle-brand.names"));
 //		String sql = "select distinct brand from vehicle_brand where brand=1028";
 		String sql = "select distinct brand from vehicle_brand";
 		ResultSet rs = conn.createStatement().executeQuery(sql);
@@ -140,7 +140,12 @@ public class HierarchyBrand {
 			if (rs1.next()) {
 				String subBrandNameEng = rs1.getString(1);
 				String[] tokens = subBrandNameEng.split("_", 4);
-				names.write(tokens[0] + "_" + tokens[1] + "_" + tokens[2]);
+				if (tokens.length == 1) {
+					names.write(tokens[0]);
+				}
+				else {
+					names.write(tokens[0] + "_" + tokens[1] + "_" + tokens[2]);
+				}
 				names.newLine();
 			}
 			else {

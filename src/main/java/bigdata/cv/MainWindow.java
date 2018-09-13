@@ -169,7 +169,7 @@ public class MainWindow implements WindowListener {
 					MainWindow window = new MainWindow();
 					window.frame.setVisible(true);
 					window.frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
-					window.frame.addWindowListener(window);
+					window.frame.addWindowListener(window);					
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -467,9 +467,8 @@ public class MainWindow implements WindowListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
 				cardLayout.show(cards, "brandPanel");
-				//brandPanel.updateUI();
+				brandPanel.updateUI();
 			}
 			
 		});
