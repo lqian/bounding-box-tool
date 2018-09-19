@@ -344,55 +344,37 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 	
 	class ComboListener extends KeyAdapter {
 		
-		long ts = 0;
-		long delay = 0;
+		String input ;
 		int cbId = 0;
-		
-		String input = null;
-
-		
 		public ComboListener(int cbId) {
 			super();
 			this.cbId = cbId;
 		}
 
 		@Override
-		public void keyReleased(KeyEvent e) {
-			long curr = System.currentTimeMillis();
-			if ( ts == 0 ) {
-				ts = curr;
-				delay = 0;
-			}
-			else {
-				delay = curr - ts;
-				ts = curr;
-			}
-			if (delay < 200 ) return;
-			
-			String text = ((JTextField)e.getSource()).getText();
-			if (text != null && !text.isEmpty()) {
-				if (!text.equals(input) ) {
-					input = text;
-					System.out.println(text);
-					if (cbId ==0) {
-						searchBrand();
-					}
-					else if(cbId ==1) {
-						searchSubBrand();
-					}
-					else {
-						searchModel();
-					}
-					ts = 0;
-					delay = 0;
+		public void keyReleased(KeyEvent e) {			
+			char ch = e.getKeyChar();
+			 if (ch == '\n') {
+				 input = ((JTextField)e.getSource()).getText();
+				if (cbId ==0) {
+					searchBrand();
 				}
+				else if(cbId ==1) {
+					searchSubBrand();
+				}
+				else {
+					searchModel();
+				}
+			}
+			else if (ch == 27) { 
+				((JTextField)e.getSource()).setText("");
 			}
 			super.keyReleased(e);
 		}
 		
 		void searchModel() {
 			for (Model m: models) {
-				if (m.fullNameCNs.indexOf(input) !=-1) {
+				if (m.fullNameCNs.indexOf(input.trim().toUpperCase()) !=-1) {
 					cbBrand.setSelectedItem(m.subbrand.brand.brandNameCN);
 					cbSubBrand.setSelectedItem(m.subbrand.subBrandNameCN);
 					cbModel.setSelectedItem(m.fullNameCNs);
@@ -404,7 +386,7 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 
 		void searchBrand() {
 			for (Brand b: brands) {
-				if (b.brandNameCN.indexOf(input)!=-1) {							
+				if (b.brandNameCN.indexOf(input.trim().toUpperCase())!=-1) {							
 					cbBrand.setSelectedItem(b.brandNameCN);		
 					cbBrand.showPopup();
 					break;
@@ -414,7 +396,7 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		
 		void searchSubBrand() {
 			for (SubBrand sb: subbrands) {
-				if (sb.subBrandNameCN.indexOf(input) != -1) {
+				if (sb.subBrandNameCN.indexOf(input.trim().toUpperCase()) != -1) {
 					cbBrand.setSelectedItem(sb.brand.brandNameCN);
 					cbSubBrand.showPopup();
 					cbSubBrand.setSelectedItem(sb.subBrandNameCN);
