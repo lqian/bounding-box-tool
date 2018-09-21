@@ -40,13 +40,13 @@ import javax.swing.JDialog;
 @SuppressWarnings("serial")
 public class FilterDialog extends JDialog {
 	
-	MainWindow mainWindow;
+	LabelPanel labelPanel;
 	
 	List<JCheckBox> clazzes = new ArrayList<>();
 	
-	public FilterDialog(MainWindow mainWindow, boolean modal) {
-		super(mainWindow.frame, modal);
-		this.mainWindow = mainWindow;
+	public FilterDialog(LabelPanel labelPanel, boolean modal) {
+//		super(mainWindow.getParent(), modal);
+		this.labelPanel = labelPanel;
 		
 		initialize();
 	}
@@ -60,7 +60,7 @@ public class FilterDialog extends JDialog {
 		gbc.anchor = GridBagConstraints.WEST; 
 		
 		gbc.gridwidth = 1;
-		String[] clazzNames = mainWindow.labelConfig.clazzNames;
+		String[] clazzNames = labelPanel.labelConfig.clazzNames;
 		for (int i = 0 ; i< clazzNames.length; ++i) {
 			gbc.gridx = i % 8;
 			gbc.gridy = i / 8;
@@ -82,10 +82,10 @@ public class FilterDialog extends JDialog {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				mainWindow.clearFilter();
+				labelPanel.clearFilter();
 				for (JCheckBox cb: clazzes) {
 					if (cb.isSelected())
-						mainWindow.addClazzFilter(cb.getText());
+						labelPanel.addClazzFilter(cb.getText());
 				}
 				
 				FilterDialog.this.dispose();
@@ -107,10 +107,10 @@ public class FilterDialog extends JDialog {
 		public void actionPerformed(ActionEvent e) {
 			JCheckBox cb = (JCheckBox)e.getSource();
 			if (cb.isSelected()) {
-				mainWindow.addClazzFilter(cb.getText());
+				labelPanel.addClazzFilter(cb.getText());
 			}
 			else {
-				mainWindow.removeClazzFilter(cb.getText());
+				labelPanel.removeClazzFilter(cb.getText());
 			}
 		}
 		

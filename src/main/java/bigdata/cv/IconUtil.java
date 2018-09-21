@@ -20,6 +20,7 @@
 package bigdata.cv;
 
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 
 /**
  * @author qian xiafei
@@ -35,6 +36,12 @@ public class IconUtil {
 			System.err.println("Couldn't find file: " + name);
 			return null;
 		}
+	}
+	
+	public static JButton iconButton(String name, String desc) {
+		JButton button = new JButton(icon(name, desc));
+		button.setToolTipText(desc);
+		return button;
 	}
 
 }

@@ -42,7 +42,7 @@ import javax.swing.table.TableCellRenderer;
  * @author lqian
  *
  */
-public class ClassificationPanel extends JPanel {
+public class ClassificationPanel extends JPanel implements Tool {
 
 	BorderLayout boderLayout = new BorderLayout(10, 10);
 
@@ -515,6 +515,18 @@ public class ClassificationPanel extends JPanel {
 		boolean selected = false;
 		String baseName;
 		BufferedImage image;
+	}
+
+	@Override
+	public void saveCurrentWork() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void addButtons() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

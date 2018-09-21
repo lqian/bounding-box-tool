@@ -52,7 +52,6 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 	}
 
 	void initCompoments() {
-		
 		mBrand = new DefaultComboBoxModel<>();
 		mSubBrand = new DefaultComboBoxModel<>();
 		mModel = new DefaultComboBoxModel<>();
@@ -76,7 +75,6 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		textfield = (JTextField)cbModel.getEditor().getEditorComponent();
 		textfield.addKeyListener(new ComboListener(2));
 		
-		//TODO combox search feature
 		SpringLayout layout = new SpringLayout();
 		JPanel panel1 = new JPanel();
 		panel1.setLayout(layout);	
@@ -408,5 +406,3 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		}
 	}
 }
-
-

@@ -4,18 +4,17 @@
 package bigdata.cv;
 
 import static bigdata.cv.IconUtil.icon;
+import static bigdata.cv.IconUtil.iconButton;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GridLayout;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +42,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.JToolBar;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -57,23 +57,20 @@ import dataset.Util;
  */
 
 @SuppressWarnings({ "rawtypes", "serial", "unchecked" })
-public class BrandPanel extends JPanel {
-
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
+public class BrandPanel extends JPanel implements Tool {
 
 	JTable plateNoTable;
 
 	JTable brandsTable;
 	
+	String fullBrandCode;
+	
+	JToolBar toolBar;
 
 	GridLayout grid = new GridLayout(1, 6);
 	JTextField txtfullBrand = new JTextField("1120016002");
-	JButton btnSearch = new JButton("search");
-	JButton btnRemoveInvalid = new JButton("Remove Invalid Path Sample");
+//	JButton btnSearch = new JButton("search");
+	JButton btnRemoveInvalid ;
 	List<PlateEntiy> plateEntities = new ArrayList<>();
 
 	DefaultTableModel tableModel; 
@@ -118,37 +115,33 @@ public class BrandPanel extends JPanel {
 		super();
 		txtfullBrand.setColumns(10);
 		otherFullBrand.setColumns(10);
-		btnDeleteAll = new JButton(icon("remove_all.png", "remove all samples in the list"));
-		btnDeleteAll.setToolTipText("remove all item in the list");
 		
-		btnCorrect = new JButton(icon("correct.png", "use a select item to correct the samples"));
-		btnCorrect.setToolTipText("use a select item to correct the samples");
+		btnRemoveInvalid = iconButton("check.png", "Remove Invalid Path Sample");
+		btnDeleteAll = iconButton("remove_all.png", "remove all samples in the list");
 		
-		btnDeleteOne = new JButton(icon("remove_one.png", "remove one brand from the list"));
-		btnDeleteOne.setToolTipText("remove one brand from the list");
+		btnCorrect = iconButton("correct.png", "use a select item to correct the samples");
 		
-		btnOther = new JButton(icon("use_another.png", "use brand selected from combxo"));
-		btnOther.setToolTipText("use brand selected from combxo");
+		btnDeleteOne = iconButton("remove_one.png", "remove one brand from the list");
 		
-		JPanel northPanel = new JPanel();
-		JPanel centerPanel = new JPanel();
+		btnOther = iconButton("use_another.png", "use brand selected from combxo");
+		
+		JPanel weastPanel = new JPanel();
+		weastPanel.setLayout(new BorderLayout(10, 10));
+		
+//		JPanel leftNorthPanel = new JPanel();
 		JPanel eastPanel = new JPanel();
 		JPanel southPanel = new JPanel();
 		
 		
-		//northPanel.setLayout(grid);
-		northPanel.add(new JLabel("full brand code:"));
-		northPanel.add(txtfullBrand);		
-		northPanel.add(btnSearch);
-		northPanel.add(btnRemoveInvalid);
+		setLayout(new BorderLayout(10, 10));
+		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+				weastPanel, eastPanel);
+		splitPane.setResizeWeight(.75);
+		add(splitPane, BorderLayout.CENTER);
+		add(southPanel, BorderLayout.SOUTH);
 		
 		southPanel.add(lblStatus);
 		
-		setLayout(new BorderLayout(10, 10));
-		add(northPanel, BorderLayout.NORTH);
-//		add(centerPanel, BorderLayout.CENTER);
-//		add(eastPanel, BorderLayout.EAST);
-		add(southPanel, BorderLayout.SOUTH);
 
 		tableModel = new DefaultTableModel(null, new String []{ "Plate No", "plate color", "Count", "Corrected" }) {
 			@Override
@@ -162,18 +155,12 @@ public class BrandPanel extends JPanel {
 		plateNoTable.setDragEnabled(false);
 		plateNoTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);	 
 		JScrollPane scrollPane = new JScrollPane(plateNoTable);
-		centerPanel.setLayout(new BorderLayout(10, 10));
-		//plateNoTable.setFillsViewportHeight(true);
-		centerPanel.add(scrollPane, BorderLayout.CENTER);
-		//plateNoTable.setSize(centerPanel.getSize());
-		//scrollPane.setPreferredSize(centerPanel.getPreferredSize());
 		
-		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-				scrollPane, eastPanel);
-		splitPane.setResizeWeight(.75);
-		add(splitPane, BorderLayout.CENTER);
+		weastPanel.add(scrollPane, BorderLayout.CENTER);
 		
-		btnSearch.addActionListener(new SearchAction());
+		
+		
+//		btnSearch.addActionListener(new SearchAction());
 		btnRemoveInvalid.addActionListener(new RemoveInvalidPathListener());
 		
 		plateNoTable.getSelectionModel().addListSelectionListener(new PlateNoTableSelectionListener() );
@@ -203,8 +190,8 @@ public class BrandPanel extends JPanel {
 		JButton moreBrand = new JButton(icon("more.png", "show more brand"));
 		moreBrand.addActionListener(new MoreActionListener() );
 		
-		JButton markAsCorrectButton = new JButton(icon("mark_as_correct.png", "mark all samples as correct"));
-		markAsCorrectButton.setToolTipText("mark all samples as correct");
+		JButton markAsCorrectButton = iconButton("mark_as_correct.png", "mark all samples as correct");
+		JButton markAsUnknown = iconButton("keep_as_unknown.png", "keep all samples as unknow");
 		eastPanel.setLayout(new BorderLayout());
 		JPanel pn = new JPanel();
 		eastPanel.add(pn, BorderLayout.NORTH);
@@ -212,6 +199,7 @@ public class BrandPanel extends JPanel {
 		pn.add(markAsCorrectButton);
 		pn.add(btnDeleteAll);
 		pn.add(btnDeleteOne);
+		pn.add(markAsUnknown);
 		pn.add(cbOtherFullBrand);
 		pn.add(btnOther);
 		pn.add(moreBrand);
@@ -242,6 +230,7 @@ public class BrandPanel extends JPanel {
 		btnOther.addActionListener(new OtherAction() );
 		btnNext.addActionListener(new NextAction());
 		btnPre.addActionListener(new PreActionListener());
+		markAsUnknown.addActionListener(new MarkAsUnknowAction());
 		
 		brandSelector = new BrandSelector(cbOtherFullBrand, recentUsed);
 	}
@@ -292,10 +281,10 @@ public class BrandPanel extends JPanel {
 		//this.plateNoTable.removeAll();
 		
 		conn = Util.createConn();
-		String fullbrand = this.txtfullBrand.getText();
-		int brand = Integer.parseInt(fullbrand.substring(0, 4));
-		int subbrand = Integer.parseInt(fullbrand.substring(4, 7));
-		int model = Integer.parseInt(fullbrand.substring(7,10));
+		 
+		int brand = Integer.parseInt(fullBrandCode.substring(0, 4));
+		int subbrand = Integer.parseInt(fullBrandCode.substring(4, 7));
+		int model = Integer.parseInt(fullBrandCode.substring(7,10));
 		
 		Statement stm = conn.createStatement();
 		String sql = String.format("select count(1) total, plate_nbr, plate_color "
@@ -427,6 +416,40 @@ public class BrandPanel extends JPanel {
 			}
 		}
 	}
+	
+	class MarkAsUnknowAction implements  ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			try {
+				updatableSet.beforeFirst();
+				while (updatableSet.next()) {
+					Path p = Paths.get(updatableSet.getString("path"));
+					if (Files.exists(p)) {
+						updatableSet.updateInt("deprecated", 2);
+						updatableSet.updateRow();
+					}
+					else {
+						updatableSet.deleteRow();
+					}
+				}
+				
+				updatableSet.close();
+
+				int idx = plateNoTable.getSelectedRow();
+				tableModel.setValueAt(true, idx, 3);
+				
+				if (idx < tableModel.getRowCount() -1) {
+					int next = ++idx;
+					plateNoTable.setRowSelectionInterval(next, next);
+					//plateNoTable.changeSelection(from, end, false, false);
+				}
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
+	
 	
 	class CorrectActionListener implements  ActionListener {
 		// correct
@@ -768,6 +791,16 @@ public class BrandPanel extends JPanel {
 			
 			return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 		}
+	}
+
+	@Override
+	public void saveCurrentWork() {
+	}
+
+	@Override
+	public void addButtons() {
+		toolBar.addSeparator();
+		toolBar.add(btnRemoveInvalid); 
 	}
 	
 }
