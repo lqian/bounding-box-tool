@@ -43,12 +43,14 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 	private BrandChangeListener brandChangeListener;
 
 	private SubBrandChangeListener subBrandChangeListener;
+	
+	boolean initialized = false;
 
 	public BrandSelector(JComboBox<String> cbOtherFullBrand, Map<String, String> recentUsed) {
 		this.cbOtherFullBrand = cbOtherFullBrand;
 		this.recentUsed = recentUsed;
 		initCompoments();
-		initData();
+//		initData();
 	}
 
 	void initCompoments() {
@@ -129,6 +131,7 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 	}
 	
 	void initData() {
+		if (initialized) return ;
 		ResultSet rs;
 		try {
 			Connection conn = Util.createConn();

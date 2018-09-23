@@ -165,7 +165,7 @@ public class MainWindow implements WindowListener {
 						current.saveCurrentWork();
 					}
 					cardLayout.show(cards, "brandPanel");
-					brandPanel.fullBrandCode = input;
+					brandPanel.fullBrandCode = input; 
 					current = (Tool)brandPanel;
 					current.addButtons();
 					aboutButton();
