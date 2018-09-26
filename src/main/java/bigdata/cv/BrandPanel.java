@@ -62,86 +62,86 @@ public class BrandPanel extends JPanel implements Tool {
 	JTable plateNoTable;
 
 	JTable brandsTable;
-	
+
 	String fullBrandCode;
-	
+
 	JToolBar toolBar;
 
 	GridLayout grid = new GridLayout(1, 6);
 	JTextField txtfullBrand = new JTextField("1120016002");
-//	JButton btnSearch = new JButton("search");
+	//	JButton btnSearch = new JButton("search");
 	JButton btnRemoveInvalid ;
 	List<PlateEntiy> plateEntities = new ArrayList<>();
 
 	DefaultTableModel tableModel; 
-	 
+
 	Connection conn = null;
-	
+
 	Path root = Paths.get("/train-data/vehicle-brand-dataset");
 
 	private DefaultTableModel dmBrand;
-	
+
 	String _plateNo = "";
 	String _plateColor = "";
 
 	private PreparedStatement pstm;
 
 	private ResultSet updatableSet;
-	
+
 	private JButton btnCorrect;
 	JButton btnDeleteAll;
 	JButton btnDeleteOne;
 	JButton btnNext = new JButton(">>");
 	JButton btnPre = new JButton("<<");
-	
-//	Set<String> recentUsed = new HashSet<>();
+
+	//	Set<String> recentUsed = new HashSet<>();
 	Map<String, String> recentUsed = new HashMap<>();
-	
-	
+
+
 	JComboBox<String>  cbOtherFullBrand = new JComboBox<>();
 	DefaultComboBoxModel<String> cbModel = new DefaultComboBoxModel<>();
-	
+
 	JTextField otherFullBrand = new JTextField("6000001000");
 	JButton btnOther;
 	private String path;
-	
+
 	JLabel lblStatus = new JLabel();
-	
+
 	SimpleImagePanel imagePanel = new SimpleImagePanel();
-	
+
 	BrandSelector  brandSelector;
-	
+
 	public BrandPanel()  {
 		super();
 		txtfullBrand.setColumns(10);
 		otherFullBrand.setColumns(10);
-		
+
 		btnRemoveInvalid = iconButton("check.png", "Remove Invalid Path Sample");
 		btnDeleteAll = iconButton("remove_all.png", "remove all samples in the list");
-		
+
 		btnCorrect = iconButton("correct.png", "use a select item to correct the samples");
-		
+
 		btnDeleteOne = iconButton("remove_one.png", "remove one brand from the list");
-		
+
 		btnOther = iconButton("use_another.png", "use brand selected from combxo");
-		
+
 		JPanel weastPanel = new JPanel();
 		weastPanel.setLayout(new BorderLayout(10, 10));
-		
-//		JPanel leftNorthPanel = new JPanel();
+
+		//		JPanel leftNorthPanel = new JPanel();
 		JPanel eastPanel = new JPanel();
 		JPanel southPanel = new JPanel();
-		
-		
+
+
 		setLayout(new BorderLayout(10, 10));
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
 				weastPanel, eastPanel);
 		splitPane.setResizeWeight(.75);
 		add(splitPane, BorderLayout.CENTER);
 		add(southPanel, BorderLayout.SOUTH);
-		
+
 		southPanel.add(lblStatus);
-		
+
 
 		tableModel = new DefaultTableModel(null, new String []{ "Plate No", "plate color", "Count", "Corrected" }) {
 			@Override
@@ -155,16 +155,16 @@ public class BrandPanel extends JPanel implements Tool {
 		plateNoTable.setDragEnabled(false);
 		plateNoTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);	 
 		JScrollPane scrollPane = new JScrollPane(plateNoTable);
-		
+
 		weastPanel.add(scrollPane, BorderLayout.CENTER);
-		
-		
-		
-//		btnSearch.addActionListener(new SearchAction());
+
+
+
+		//		btnSearch.addActionListener(new SearchAction());
 		btnRemoveInvalid.addActionListener(new RemoveInvalidPathListener());
-		
+
 		plateNoTable.getSelectionModel().addListSelectionListener(new PlateNoTableSelectionListener() );
-		
+
 		dmBrand = new DefaultTableModel(null, 
 				new String[] {"full brand code", "brand name", "count"}) {
 			@Override
@@ -172,7 +172,7 @@ public class BrandPanel extends JPanel implements Tool {
 				return false;
 			}
 		};
-		
+
 		cbOtherFullBrand.setModel(cbModel);
 		cbOtherFullBrand.setEditable(true);
 		cbOtherFullBrand.setPreferredSize(new Dimension(200, 24));
@@ -186,10 +186,10 @@ public class BrandPanel extends JPanel implements Tool {
 				}
 			}
 		});
-		
+
 		JButton moreBrand = new JButton(icon("more.png", "show more brand"));
 		moreBrand.addActionListener(new MoreActionListener() );
-		
+
 		JButton markAsCorrectButton = iconButton("mark_as_correct.png", "mark all samples as correct");
 		JButton markAsUnknown = iconButton("keep_as_unknown.png", "keep all samples as unknow");
 		eastPanel.setLayout(new BorderLayout());
@@ -203,26 +203,26 @@ public class BrandPanel extends JPanel implements Tool {
 		pn.add(cbOtherFullBrand);
 		pn.add(btnOther);
 		pn.add(moreBrand);
-		
+
 		JPanel pc = new JPanel();
 		pc.setLayout(new GridLayout(2,1));
 		eastPanel.add(pc, BorderLayout.CENTER);
-		
+
 		brandsTable = new JTable(dmBrand);
 		JScrollPane scrollPane1 = new JScrollPane(brandsTable);
 		brandsTable.setEnabled(true);
 		brandsTable.addMouseListener( new BrandTableMouseListener());
 		brandsTable.getSelectionModel().addListSelectionListener( new BrandsTableListSelectionListener());
-		
+
 		pc.add(scrollPane1);
 		pc.add(imagePanel);
-		
+
 		JPanel ps = new JPanel();
 		eastPanel.add(ps, BorderLayout.SOUTH);
-		
+
 		ps.add(btnPre);
 		ps.add(btnNext);
-		
+
 		btnCorrect.addActionListener(new CorrectActionListener());
 		markAsCorrectButton.addActionListener(new MarkAsCorrectAction());
 		btnDeleteAll.addActionListener(new DeleteAllAction() );
@@ -231,10 +231,10 @@ public class BrandPanel extends JPanel implements Tool {
 		btnNext.addActionListener(new NextAction());
 		btnPre.addActionListener(new PreActionListener());
 		markAsUnknown.addActionListener(new MarkAsUnknowAction());
-		
+
 		brandSelector = new BrandSelector(cbOtherFullBrand, recentUsed);
 	}
-	
+
 	private void refreshBrandTable() throws SQLException {
 		pstm.clearParameters();
 		pstm.setString(1, _plateNo);
@@ -252,7 +252,7 @@ public class BrandPanel extends JPanel implements Tool {
 			dmBrand.addRow(new Object[] {be.fullBrandCode, be.fullBrandName, be.count});
 		}
 		rs.close();
-		
+
 		int r = dmBrand.getRowCount();
 		if (r > 0) {
 			brandsTable.setRowSelectionInterval(r-1, r-1);
@@ -273,50 +273,50 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	public void initData() throws ClassNotFoundException, SQLException {
 		while (tableModel.getRowCount() > 0) {
 			tableModel.removeRow(0);
 		}
 		//this.plateNoTable.removeAll();
-		
+
 		conn = Util.createConn();
-		 
+
 		int brand = Integer.parseInt(fullBrandCode.substring(0, 4));
 		int subbrand = Integer.parseInt(fullBrandCode.substring(4, 7));
 		int model = Integer.parseInt(fullBrandCode.substring(7,10));
-		
+
 		Statement stm = conn.createStatement();
 		String sql = String.format("select count(1) total, plate_nbr, plate_color "
 				+ " from vehicle_dataset where vehicle_brand=%d and vehicle_sub_brand=%d and vehicle_model=%d and corrected=0 "
 				+ " and deprecated=0 "
 				+ " group by plate_nbr, plate_color order by count(1) desc ", brand, subbrand, model);
-		
+
 		ResultSet rs = stm.executeQuery(sql);
 		while (rs.next()) {
 			PlateEntiy pe = new PlateEntiy();
 			pe.plateNo = rs.getString("plate_nbr");
 			pe.plateColor = rs.getString("plate_color");
 			pe.count = rs.getInt("total");
-			
+
 			plateEntities.add(pe);
 			tableModel.addRow(new Object[] {pe.plateNo, pe.plateColor, pe.count, false});
 		}
 		rs.close();
-//		plateNoTable.updateUI();
-		
+		//		plateNoTable.updateUI();
+
 		pstm = conn.prepareStatement("select vehicle_brand, vehicle_sub_brand, "
 				+ " vehicle_model, fullNameCN, count(1) as total"
 				+ " from vehicle_dataset d left join brand_dictionary b "
 				+ " on vehicle_brand=brand and vehicle_sub_brand = subbrand and vehicle_model=model"
 				+ " where plate_nbr=? and plate_color=? and deprecated = 0 group by  vehicle_brand, vehicle_sub_brand, vehicle_model,fullNameCN order by count(1)");
 	}
-	
+
 	boolean putNewBrand(String code) {
 		int brand = Integer.parseInt(code.substring(0, 4));
 		int subbrand = Integer.parseInt(code.substring(4, 7));
 		int model = Integer.parseInt(code.substring(7,10));
-		
+
 		try {
 			String sql = String.format("select fullNameCN from brand_dictionary where brand=%d and subbrand=%d and model=%d", brand, subbrand, model);
 			ResultSet rs = conn.createStatement().executeQuery(sql);
@@ -331,9 +331,9 @@ public class BrandPanel extends JPanel implements Tool {
 			e.printStackTrace();
 		}
 		return false;
-		
+
 	}
-	
+
 	void correctBrand(String plateNo, String plateColor, int brand, int subBrand, int model) throws Exception {
 		//update database
 		String newCode = String.format("b%04d%03d%03d", brand, subBrand, model);
@@ -344,7 +344,7 @@ public class BrandPanel extends JPanel implements Tool {
 			int osb = updatableSet.getInt("vehicle_sub_brand");
 			int m = updatableSet.getInt("vehicle_model");
 			int d = updatableSet.getInt("deprecated");
-			
+
 			if (d == 1) continue;
 			if (Files.exists(p)) {
 				if (!( ob == brand  && osb == subBrand && m == model  )) { 
@@ -400,12 +400,12 @@ public class BrandPanel extends JPanel implements Tool {
 						updatableSet.deleteRow();
 					}
 				}
-				
+
 				updatableSet.close();
 
 				int idx = plateNoTable.getSelectedRow();
 				tableModel.setValueAt(true, idx, 3);
-				
+
 				if (idx < tableModel.getRowCount() -1) {
 					int next = ++idx;
 					plateNoTable.setRowSelectionInterval(next, next);
@@ -416,7 +416,7 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	class MarkAsUnknowAction implements  ActionListener {
 
 		@Override
@@ -433,12 +433,12 @@ public class BrandPanel extends JPanel implements Tool {
 						updatableSet.deleteRow();
 					}
 				}
-				
+
 				updatableSet.close();
 
 				int idx = plateNoTable.getSelectedRow();
 				tableModel.setValueAt(true, idx, 3);
-				
+
 				if (idx < tableModel.getRowCount() -1) {
 					int next = ++idx;
 					plateNoTable.setRowSelectionInterval(next, next);
@@ -449,8 +449,8 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
-	
+
+
 	class CorrectActionListener implements  ActionListener {
 		// correct
 		@Override
@@ -474,7 +474,7 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	class SearchAction implements ActionListener {
 
 		@Override
@@ -488,7 +488,7 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	class PlateNoTableSelectionListener implements ListSelectionListener {
 		@Override
 		public void valueChanged(ListSelectionEvent e) {
@@ -496,15 +496,15 @@ public class BrandPanel extends JPanel implements Tool {
 			int msi = lsm.getMinSelectionIndex(); 
 			if (msi == -1) return;
 			String plateNo = (String)tableModel.getValueAt(msi, 0);
-//			Boolean correted = (Boolean)tableModel.getValueAt(msi, 3);	
+			//			Boolean correted = (Boolean)tableModel.getValueAt(msi, 3);	
 			if (!_plateNo.equals(plateNo)) {
 				_plateNo = plateNo;
 				_plateColor = (String)tableModel.getValueAt(msi, 1);
-				
+
 				while (dmBrand.getRowCount() > 0) {
 					dmBrand.removeRow(0);
 				}
-				
+
 				try {
 					refreshBrandTable();
 				} catch (SQLException e1) {
@@ -513,7 +513,7 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	class RemoveInvalidPathListener implements ActionListener {
 
 		@Override
@@ -550,24 +550,24 @@ public class BrandPanel extends JPanel implements Tool {
 			t.start();
 		}
 	}
-	
+
 	class MoreActionListener implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			brandSelector.setVisible(true);	
-//			brandSelector.pack();
+			//			brandSelector.pack();
 		}
 	}
 	class BrandTableMouseListener extends MouseAdapter {
 
 		@Override
 		public void mouseClicked(MouseEvent e) {
-			 
-			
+
+
 		} 
 	}
-	
+
 	class BrandsTableListSelectionListener implements ListSelectionListener {
 
 		@Override
@@ -592,14 +592,14 @@ public class BrandPanel extends JPanel implements Tool {
 		public int count;
 		public boolean selected = false;
 	}
-	
+
 	class BrandEntity {
 		public String fullBrandCode;
 		public String fullBrandName;
 		public int count;
-		
+
 	}
-	
+
 	class SimpleImagePanel extends JPanel{
 
 		String name; 
@@ -622,29 +622,29 @@ public class BrandPanel extends JPanel implements Tool {
 			this.name = name; 
 		}
 	}
-	
+
 	class DeleteAllAction implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			try {
 				updatableSet.first();
 				do {
-//					String file = updatableSet.getString("path");
-//					Path p = Paths.get(file);
-//					if (Files.exists(p)) {
-//						Files.delete(p);
-//					}
+					//					String file = updatableSet.getString("path");
+					//					Path p = Paths.get(file);
+					//					if (Files.exists(p)) {
+					//						Files.delete(p);
+					//					}
 					updatableSet.updateInt("deprecated", 1);
 					updatableSet.updateRow();
 				} while (updatableSet.next());
 				updatableSet.close();
-				
+
 				while (dmBrand.getRowCount() > 0) {
 					dmBrand.removeRow(0);
 				}
 				int row = plateNoTable.getSelectedRow();
 				tableModel.removeRow(row);
-				
+
 				if (row < tableModel.getRowCount() -1) {
 					int next = (row++);
 					plateNoTable.setRowSelectionInterval(next, next);
@@ -655,18 +655,18 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	class OtherAction implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			String code = (String)cbOtherFullBrand.getSelectedItem();
-			
+
 			if (!recentUsed.containsKey(code) ) {
 				putNewBrand(code);					
 				cbOtherFullBrand.addItem(code);					
 			}
-			
+
 			int brand = Integer.parseInt(code.substring(0, 4));
 			int subbrand = Integer.parseInt(code.substring(4, 7));
 			int model = Integer.parseInt(code.substring(7));
@@ -675,7 +675,7 @@ public class BrandPanel extends JPanel implements Tool {
 				int idx = plateNoTable.getSelectedRow();
 				if (idx < tableModel.getRowCount() -1) {
 					int next = ++idx;
-					 
+
 					plateNoTable.setRowSelectionInterval(next, next);
 					//plateNoTable.changeSelection(from, end, false, false);
 				}
@@ -684,7 +684,7 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	class PreActionListener implements ActionListener {
 
 		@Override
@@ -711,7 +711,7 @@ public class BrandPanel extends JPanel implements Tool {
 			}
 		}
 	}
-	
+
 	void skipNext(String tb) {
 		boolean found = false;
 		try {
@@ -720,7 +720,7 @@ public class BrandPanel extends JPanel implements Tool {
 				int sb = updatableSet.getInt("vehicle_sub_brand");
 				int m = updatableSet.getInt("vehicle_model");
 				String fc = String.format("%04d%03d%03d", b, sb, m);
-				
+
 				if (fc.equals(tb) ) {
 					path = updatableSet.getString("path");
 					if (Files.exists(Paths.get(path))) {
@@ -734,7 +734,7 @@ public class BrandPanel extends JPanel implements Tool {
 			e1.printStackTrace();
 		}
 	}
-	
+
 	class NextAction implements ActionListener  {
 
 		@Override
@@ -743,8 +743,8 @@ public class BrandPanel extends JPanel implements Tool {
 			skipNext(tb);
 		}
 	}
-	
-	
+
+
 	class DeleteOnAction implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -770,25 +770,25 @@ public class BrandPanel extends JPanel implements Tool {
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
-			
+
 			dmBrand.removeRow(sidx);
 		}
 	}
-	
-	
+
+
 	class ComboxRender  extends BasicComboBoxRenderer  {
-		
+
 		@Override
 		public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected,
 				boolean cellHasFocus) {
 			String val = (String) list.getModel().getElementAt(index);
 			if (val != null && !"null".equals(val)) {
-				 int i = val.indexOf("|");
-				 if (i == -1 && recentUsed.containsKey(val)) {
-					 value = val + "| " + recentUsed.get(val) ;
-				 }
+				int i = val.indexOf("|");
+				if (i == -1 && recentUsed.containsKey(val)) {
+					value = val + "| " + recentUsed.get(val) ;
+				}
 			}
-			
+
 			return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 		}
 	}
@@ -802,5 +802,5 @@ public class BrandPanel extends JPanel implements Tool {
 		toolBar.addSeparator();
 		toolBar.add(btnRemoveInvalid); 
 	}
-	
+
 }

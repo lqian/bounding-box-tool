@@ -51,6 +51,7 @@ public class MainWindow implements WindowListener {
 	ClassificationPanel classificationPanel = new ClassificationPanel();
 	BrandPanel brandPanel = new BrandPanel();
 	LabelPanel labelPanel = new LabelPanel();
+	ImageSearchPanel imageSearchPanel = new ImageSearchPanel();
 
 	private JButton btnAbout;
 
@@ -59,6 +60,8 @@ public class MainWindow implements WindowListener {
 	private JButton classificationButton;
 
 	private JButton brandButton;
+	
+	private JButton imageSearchButton;
 	
 	JToolBar toolBar = new JToolBar();	
 
@@ -122,6 +125,9 @@ public class MainWindow implements WindowListener {
 		brandButton = iconButton("vehicle.png", "correct vehicle brand");
 		toolBar.add(brandButton);
 		
+		imageSearchButton = iconButton("image_search.png", "fast content base image search demo");
+		toolBar.add(imageSearchButton);
+		
 		classificationButton.addActionListener( new ActionListener () {
 			
 			@Override
@@ -148,7 +154,6 @@ public class MainWindow implements WindowListener {
 					aboutButton();
 					updateButtonUI();
 				}
-				
 			}
 		});
 		
@@ -160,22 +165,13 @@ public class MainWindow implements WindowListener {
 
 				if (input != null && input.length() > 0) {
 
-					initToolBar();
-					if (current != null) {
-						current.saveCurrentWork();
-					}
-					cardLayout.show(cards, "brandPanel");
-					brandPanel.fullBrandCode = input; 
-					current = (Tool)brandPanel;
-					current.addButtons();
-					aboutButton();
-					updateButtonUI();
+					switchPanel("brandPanel");
 					try {
+						brandPanel.fullBrandCode = input;
 						brandPanel.initData();
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}  
-					
 				}
 			}
 
@@ -184,19 +180,30 @@ public class MainWindow implements WindowListener {
 		labelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				
-				if (current != null) {
-					current.saveCurrentWork();
-				}
-				cardLayout.show(cards, "labelPanel");
-				current = (Tool) labelPanel;
-				
-				initToolBar();
-				current.addButtons();
-				aboutButton();
-				updateButtonUI();
+				switchPanel("labelPanel");
 			}
 		});
+		
+		imageSearchButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				switchPanel("imageSearchPanel");
+			}
+		});
+	}
+	
+	void switchPanel(String name) {
+		if (current != null) {
+			current.saveCurrentWork();
+		}
+		cardLayout.show(cards, name);
+		current = (Tool) labelPanel;
+		
+		initToolBar();
+		current.addButtons();
+		aboutButton();
+		updateButtonUI();
 	}
 
 	private void initialize() {
@@ -215,6 +222,7 @@ public class MainWindow implements WindowListener {
 //		cards.add(annotationPanel, "annotationPanel");
 		cards.add(classificationPanel, "classificationPanel");
 		cards.add(brandPanel, "brandPanel");
+		cards.add(imageSearchPanel, "imageSearchPanel");
 		
 		initToolBar();
 		aboutButton();
