@@ -12,18 +12,14 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -36,80 +32,23 @@ import dataset.Util;
  *
  */
 @SuppressWarnings("serial")
-public class BrandSelector extends JFrame implements WindowStateListener {
+public class BrandSelector extends JPanel  {
 	
+	private static BrandSelector _instance;
+
 	private ModelChangeListener modelChangeListener;
 
 	private BrandChangeListener brandChangeListener;
 
 	private SubBrandChangeListener subBrandChangeListener;
-	
+
 	boolean initialized = false;
-
-	public BrandSelector(JComboBox<String> cbOtherFullBrand, Map<String, String> recentUsed) {
-		this.cbOtherFullBrand = cbOtherFullBrand;
-		this.recentUsed = recentUsed;
+	
+	private BrandSelector() {
+//		this.cbOtherFullBrand = cbOtherFullBrand;
+//		this.recentUsed = recentUsed;
 		initCompoments();
-//		initData();
-	}
-
-	void initCompoments() {
-		mBrand = new DefaultComboBoxModel<>();
-		mSubBrand = new DefaultComboBoxModel<>();
-		mModel = new DefaultComboBoxModel<>();
-		
-		cbBrand = new JComboBox<>(mBrand);
-		cbBrand.setEditable(true);
-		Dimension preferredSize = new Dimension(300, 24);
-		cbBrand.setPreferredSize(preferredSize);
-		JTextField textfield = (JTextField)cbBrand.getEditor().getEditorComponent();
-		textfield.addKeyListener(new ComboListener(0));
-		
-		cbSubBrand = new JComboBox<>(mSubBrand);
-		cbSubBrand.setEditable(true);
-		cbSubBrand.setPreferredSize(preferredSize);
-		textfield = (JTextField)cbSubBrand.getEditor().getEditorComponent();
-		textfield.addKeyListener(new ComboListener(1));
-		
-		cbModel = new JComboBox<>(mModel);
-		cbModel.setEditable(true);
-		cbModel.setPreferredSize(preferredSize);
-		textfield = (JTextField)cbModel.getEditor().getEditorComponent();
-		textfield.addKeyListener(new ComboListener(2));
-		
-		SpringLayout layout = new SpringLayout();
-		JPanel panel1 = new JPanel();
-		panel1.setLayout(layout);	
-		
-		setLayout(new BorderLayout());
-		add(panel1, BorderLayout.CENTER);
-		
-		JLabel l1 = new JLabel("Brand:", JLabel.TRAILING);
-		panel1.add(l1);
-		panel1.add(cbBrand);
-		l1.setLabelFor(cbBrand);
-		
-		JLabel l2 = new JLabel("Sub Brand:", JLabel.TRAILING);
-		panel1.add(l2);
-		panel1.add(cbSubBrand);
-		l2.setLabelFor(cbSubBrand);
-		
-		JLabel l3 = new JLabel("Model:", JLabel.TRAILING);
-		panel1.add(l3);
-		panel1.add(cbModel);
-		l3.setLabelFor(cbModel);
-		SpringUtilities.makeCompactGrid(panel1, 3, 2, 6, 6, 6, 6);
-		
-		JPanel panel2 = new JPanel();
-		add(panel2, BorderLayout.SOUTH);
-		
-		ok = new JButton("Ok");
-		cancel = new JButton("Cancel");
-		
-		panel2.add(ok);
-		panel2.add(cancel);
-		
-		pack();
+		initData();
 		
 		brandChangeListener = new BrandChangeListener();
 		cbBrand.addItemListener(brandChangeListener);
@@ -117,19 +56,87 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		cbSubBrand.addItemListener(subBrandChangeListener);
 		modelChangeListener = new ModelChangeListener();
 		cbModel.addItemListener(modelChangeListener);
-		ok.addActionListener(new ConfirmActionListener());
-		cancel.addActionListener(new CancelActionListener());
 		
-		addWindowStateListener(this);
+	}
+
+	public static synchronized BrandSelector  getInstance() {
+		if (_instance == null ) {
+			_instance = new BrandSelector();
+		}
+		return _instance;
+	}
+	
+	void initCompoments() {
+		mBrand = new DefaultComboBoxModel<>();
+		mSubBrand = new DefaultComboBoxModel<>();
+		mModel = new DefaultComboBoxModel<>();
+
+		cbBrand = new JComboBox<>(mBrand);
+		cbBrand.setEditable(true);
+		Dimension preferredSize = new Dimension(300, 24);
+		cbBrand.setPreferredSize(preferredSize);
+		JTextField textfield = (JTextField)cbBrand.getEditor().getEditorComponent();
+		textfield.addKeyListener(new ComboListener(cbBrand, 0));
+
+		cbSubBrand = new JComboBox<>(mSubBrand);
+		cbSubBrand.setEditable(true);
+		cbSubBrand.setPreferredSize(preferredSize);
+		textfield = (JTextField)cbSubBrand.getEditor().getEditorComponent();
+		textfield.addKeyListener(new ComboListener(cbSubBrand, 1));
+
+		cbModel = new JComboBox<>(mModel);
+		cbModel.setEditable(true);
+		cbModel.setPreferredSize(preferredSize);
+		textfield = (JTextField)cbModel.getEditor().getEditorComponent();
+		textfield.addKeyListener(new ComboListener(cbModel, 2));
+
+		SpringLayout layout = new SpringLayout();
+		JPanel panel1 = new JPanel();
+		panel1.setLayout(layout);	
+
+		setLayout(new BorderLayout());
+		add(panel1, BorderLayout.CENTER);
+
+		JLabel l1 = new JLabel("Brand:", JLabel.TRAILING);
+		panel1.add(l1);
+		panel1.add(cbBrand);
+		l1.setLabelFor(cbBrand);
+
+		JLabel l2 = new JLabel("Sub Brand:", JLabel.TRAILING);
+		panel1.add(l2);
+		panel1.add(cbSubBrand);
+		l2.setLabelFor(cbSubBrand);
+
+		JLabel l3 = new JLabel("Model:", JLabel.TRAILING);
+		panel1.add(l3);
+		panel1.add(cbModel);
+		l3.setLabelFor(cbModel);
+		SpringUtilities.makeCompactGrid(panel1, 3, 2, 6, 6, 6, 6);
+
+		//		JPanel panel2 = new JPanel();
+		//		add(panel2, BorderLayout.SOUTH);
+		//		
+		//		ok = new JButton("Ok");
+		//		cancel = new JButton("Cancel");
+		//		
+		//		panel2.add(ok);
+		//		panel2.add(cancel); 
+
+
 		
+		//		ok.addActionListener(new ConfirmActionListener());
+		//		cancel.addActionListener(new CancelActionListener());
+
+
+
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		int screenWidth = screenSize.width;
 		int screenHeight = screenSize.height;
 		setLocation((screenWidth - this.getWidth()) / 2, (screenHeight - this.getHeight()) / 4);
-//		setLocation(x, y);
-		
+		//		setLocation(x, y);
+
 	}
-	
+
 	void initData() {
 		if (initialized) return ;
 		ResultSet rs;
@@ -152,13 +159,15 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} 
+		
+		brandFilters.addAll(brands);
 	}
 
 	Brand addBrandIfNotExists(String name, int b) {
 		Brand nb = new Brand();
 		nb.brand = b;
 		nb.brandNameCN = name;
-		
+
 		if (brands.size() > 0) {
 			Brand ob = brands.get(brands.size() - 1);
 			if (ob.brand != b) {
@@ -176,19 +185,19 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 			return nb;
 		}
 	}
-	
+
 	SubBrand addSubBrandIfNotExists(Brand brand, String subName, int sb) {
 		SubBrand nsb = new SubBrand();
 		nsb.brand = brand;
 		nsb.subBrand = sb;
 		nsb.subBrandNameCN = subName;
-		
+
 		if (brand.subBrands.size() > 0) {
 			SubBrand e = brand.subBrands.get(brand.subBrands.size() -1);
 			if (e.subBrand != sb ) {
 				brand.subBrands.add(nsb);
 				subbrands.add(nsb);
-//				mSubBrand.addElement(subName);
+				//				mSubBrand.addElement(subName);
 				return nsb;
 			}
 			else {
@@ -198,49 +207,46 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		else {
 			brand.subBrands.add(nsb);
 			subbrands.add(nsb);
-//			mSubBrand.addElement(subName);
+			//			mSubBrand.addElement(subName);
 			return nsb;
 		}
 	}
-	
+
 	void addModel(SubBrand subBrand, String fullName, int model) {
 		Model m = new Model();
 		m.model = model;
 		m.fullNameCNs = fullName;				
 		m.subbrand = subBrand;
-//		mModel.addElement(fullName);
+		//		mModel.addElement(fullName);
 		subBrand.models.add(m);
 		models.add(m);
 	}
-	
+
 	public String getFullBrandCode() {
 		return String.format("%04d%03d%03d", selectedBrand.brand, 
 				selectedSubBrand.subBrand, selectedSubBrand.models.get(siModel).model);
 	}
-	 
+
 	JComboBox<String> cbBrand, cbSubBrand, cbModel;
-	
+
 	DefaultComboBoxModel<String> mBrand, mSubBrand, mModel;
-	
+
 	Brand selectedBrand;
 	SubBrand selectedSubBrand;
+	Model selectedModel;
 	int siModel = 0;
-	
+
 	JButton ok, cancel;
-	
+
 	List<Brand> brands = new ArrayList<>();
 	List<SubBrand> subbrands = new ArrayList<>();
 	List<Model>  models = new ArrayList<>();
 	
-	boolean confirmed = false;
+	List<Brand> brandFilters = new ArrayList<>();
+	List<SubBrand> subBrandFilters = new ArrayList<>();
+	List<Model> modelFilters = new ArrayList<>();
 	
-	JComboBox<String> cbOtherFullBrand;
-	Map<String, String> recentUsed;
-
-	@Override
-	public void windowStateChanged(WindowEvent e) {
-	}
-	
+	boolean confirmed = false; 
 	class Brand {
 		Integer brand;
 		String brandNameCN;
@@ -251,9 +257,9 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		Integer subBrand;
 		String subBrandNameCN;
 		List<Model> models = new ArrayList<>();
-		
+
 	}
-	
+
 	class Model {
 		SubBrand subbrand;
 		Integer model;
@@ -267,7 +273,7 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 			BrandSelector.this.setVisible(false);
 			confirmed = false;
 		}
-		
+
 	}
 	class ConfirmActionListener implements ActionListener {
 
@@ -276,12 +282,12 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 			siModel = cbModel.getSelectedIndex();
 			if (siModel < 0) siModel = 0;			
 			BrandSelector.this.setVisible(false);
-			String item =  getFullBrandCode();
-			if (!recentUsed.containsKey(item)) {
-				recentUsed.put(item, cbModel.getItemAt(siModel));
-				cbOtherFullBrand.addItem(item);
-			}
-			 cbOtherFullBrand.setSelectedItem(item);
+//			String item =  getFullBrandCode();
+//			if (!recentUsed.containsKey(item)) {
+//				recentUsed.put(item, cbModel.getItemAt(siModel));
+//				cbOtherFullBrand.addItem(item);
+//			}
+//			cbOtherFullBrand.setSelectedItem(item);
 		}
 	}
 
@@ -293,6 +299,19 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 				int si = cbModel.getSelectedIndex();
 				if (si > -1) {
 					siModel = si;
+					selectedModel =  modelFilters.get(si);
+					selectedSubBrand = selectedModel.subbrand;
+					selectedBrand = selectedSubBrand.brand;
+					brandFilters.clear();					
+					subBrandFilters.clear();
+					cbBrand.removeItemListener(brandChangeListener);
+					cbSubBrand.removeItemListener(subBrandChangeListener);
+					subBrandFilters.add(selectedSubBrand);
+					brandFilters.add(selectedBrand);
+					cbBrand.setSelectedItem(selectedBrand.brandNameCN);
+					cbSubBrand.setSelectedItem(selectedSubBrand.subBrandNameCN);
+					cbBrand.addItemListener(brandChangeListener);
+					cbSubBrand.addItemListener(subBrandChangeListener);
 				}
 			}
 		}
@@ -303,76 +322,98 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 		@Override
 		public void itemStateChanged(ItemEvent e) {
 			if (e.getStateChange() == ItemEvent.SELECTED) {
-				 int si = cbBrand.getSelectedIndex();
+				int si = cbBrand.getSelectedIndex();
 				if (si > -1) {
-					selectedBrand = brands.get(si);
+					selectedBrand =  brandFilters.get(si);
+					cbSubBrand.removeItemListener(subBrandChangeListener);
 					mSubBrand.removeAllElements();
 					for (SubBrand sb: selectedBrand.subBrands) {
 						mSubBrand.addElement(sb.subBrandNameCN);
 					}
-					mModel.removeAllElements();
-					
-					if (selectedBrand.subBrands.size() > 0) {
-						selectedSubBrand = selectedBrand.subBrands.get(0);
-						
+					cbSubBrand.addItemListener(subBrandChangeListener);
+					subBrandFilters = selectedBrand.subBrands;
+					 
+					if (subBrandFilters.size() > 0) {
+						selectedSubBrand = subBrandFilters.get(0);
+						cbSubBrand.setSelectedIndex(0);
+						cbModel.removeItemListener(modelChangeListener);
+						mModel.removeAllElements();
 						for (Model m: selectedSubBrand.models) {
 							mModel.addElement(m.fullNameCNs);
+						}						
+						if (selectedSubBrand.models.size() > 0) {
+							cbModel.setSelectedIndex(0);
 						}
-						siModel = 0;
+						cbModel.addItemListener(modelChangeListener);						 
 					}
 				}
-			 }
+			}
 		}
 	}
 
 	class SubBrandChangeListener implements ItemListener {
 
+		@SuppressWarnings("unlikely-arg-type")
 		@Override
 		public void itemStateChanged(ItemEvent e) {
 			if (e.getStateChange() == ItemEvent.SELECTED) {
 				int si = cbSubBrand.getSelectedIndex();
 				if (si > -1) {
+					selectedSubBrand =  subBrandFilters.get(si);
+					selectedBrand  = selectedSubBrand.brand;
+					modelFilters = selectedSubBrand.models;
+					cbBrand.removeItemListener(brandChangeListener);
+//					cbBrand.removeAllItems();
+					if (!brandFilters.contains(selectedBrand.brandNameCN)) {
+						cbBrand.addItem(selectedBrand.brandNameCN);
+					}
+					cbBrand.setSelectedItem(selectedBrand.brandNameCN);
+					cbBrand.addItemListener(brandChangeListener);
+					
+					cbModel.removeItemListener(modelChangeListener);
 					mModel.removeAllElements();
-					selectedSubBrand = selectedBrand.subBrands.get(si);
 					for (Model m: selectedSubBrand.models) {
 						mModel.addElement(m.fullNameCNs);
-					}
-					siModel = 0;
+					} 
+					cbModel.addItemListener(modelChangeListener);
 				}
-			 }
+			}
 		}
 	}
-	
+
 	class ComboListener extends KeyAdapter {
-		
+		JComboBox<String> combox;
 		String input ;
 		int cbId = 0;
-		public ComboListener(int cbId) {
+		public ComboListener(JComboBox<String> combox, int cbId) {
 			super();
+			this.combox = combox;
 			this.cbId = cbId;
 		}
 
 		@Override
-		public void keyReleased(KeyEvent e) {			
-			char ch = e.getKeyChar();
-			 if (ch == '\n') {
-				 input = ((JTextField)e.getSource()).getText();
-				if (cbId ==0) {
-					searchBrand();
-				}
-				else if(cbId ==1) {
-					searchSubBrand();
-				}
-				else {
-					searchModel();
+		public void keyReleased(KeyEvent e) { 
+			if (e.isActionKey()	|| e.getKeyCode() == KeyEvent.VK_ENTER) {
+				super.keyReleased(e);
+			}
+			else {
+				input = ((JTextField)e.getSource()).getText().trim();
+				if (input !=null & input.length() > 0) {
+					if (cbId ==0) {
+						autoCompBrand();
+					}
+					else if(cbId ==1) {
+						autoCompSubBrand();
+					}
+					else {
+						autoCompModel();
+					}
 				}
 			}
-			else if (ch == 27) { 
-				((JTextField)e.getSource()).setText("");
-			}
+
 			super.keyReleased(e);
 		}
-		
+
 		void searchModel() {
 			for (Model m: models) {
 				if (m.fullNameCNs.indexOf(input.trim().toUpperCase()) !=-1) {
@@ -385,6 +426,52 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 			}
 		}
 
+		void autoCompBrand() {
+			brandFilters.clear();
+			mBrand.removeAllElements();
+			for (Brand b: brands) {
+				if (b.brandNameCN.indexOf(input)!=-1) {							
+					brandFilters.add(b);
+				}
+			}
+			System.out.println("brandFilters: " + brandFilters.size());
+			for (Brand f: brandFilters) {
+				mBrand.addElement(f.brandNameCN);
+			}
+			cbBrand.showPopup();
+		}
+
+		void autoCompSubBrand() {
+			//			if (cbSubBrand.isPopupVisible()) return;
+			subBrandFilters.clear();
+			mSubBrand.removeAllElements();
+			for (SubBrand sb: subbrands) {
+				if (sb.subBrandNameCN.indexOf(input) != -1) {
+					subBrandFilters.add(sb);
+				}
+			}
+			for (SubBrand sb: subBrandFilters) {
+				mSubBrand.addElement(sb.subBrandNameCN);
+			}
+			cbSubBrand.showPopup();
+		}
+
+		void autoCompModel() {
+			modelFilters.clear();
+			mModel.removeAllElements();
+			for (Model m: models) {
+				if (m.fullNameCNs.indexOf(input) != -1) {
+					modelFilters.add(m);
+				}
+			}
+
+			for (Model mf : modelFilters) {
+				mModel.addElement(mf.fullNameCNs);
+			}
+
+			cbModel.showPopup();
+		}
+
 		void searchBrand() {
 			for (Brand b: brands) {
 				if (b.brandNameCN.indexOf(input.trim().toUpperCase())!=-1) {							
@@ -394,15 +481,15 @@ public class BrandSelector extends JFrame implements WindowStateListener {
 				}
 			}
 		}
-		
+
 		void searchSubBrand() {
 			for (SubBrand sb: subbrands) {
 				if (sb.subBrandNameCN.indexOf(input.trim().toUpperCase()) != -1) {
 					cbBrand.setSelectedItem(sb.brand.brandNameCN);
 					cbSubBrand.showPopup();
 					cbSubBrand.setSelectedItem(sb.subBrandNameCN);
-//					cbBrand.removeItemListener(brandChangeListener);
-//					cbBrand.addItemListener(brandChangeListener);
+					//					cbBrand.removeItemListener(brandChangeListener);
+					//					cbBrand.addItemListener(brandChangeListener);
 					break;
 				}
 			}

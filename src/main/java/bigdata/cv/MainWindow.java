@@ -29,7 +29,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.IOException;
-import java.sql.SQLException;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -42,6 +41,10 @@ import javax.swing.UIManager;
 
 public class MainWindow implements WindowListener {
 
+	
+	
+	
+	
 	Tool current = null;
 	
 	JFrame frame;
@@ -160,14 +163,16 @@ public class MainWindow implements WindowListener {
 		brandButton.addActionListener(new ActionListener() {
 
 			@Override
-			public void actionPerformed(ActionEvent e) {
-				String input = JOptionPane.showInputDialog("Full Brand Code:");
-
-				if (input != null && input.length() > 0) {
-
+			public void actionPerformed(ActionEvent e) {			
+				BrandSelector brandSelector = BrandSelector.getInstance();
+				int r = JOptionPane.showConfirmDialog(frame, brandSelector, 
+						"select full brand code:" ,
+						JOptionPane.OK_CANCEL_OPTION, 
+						JOptionPane.PLAIN_MESSAGE);
+				if (r == JOptionPane.OK_OPTION) {
 					switchPanel("brandPanel");
 					try {
-						brandPanel.fullBrandCode = input;
+						brandPanel.fullBrandCode = brandSelector.getFullBrandCode();
 						brandPanel.initData();
 					} catch (Exception e1) {
 						e1.printStackTrace();
@@ -229,6 +234,7 @@ public class MainWindow implements WindowListener {
 		toolBar.updateUI();
 		frame.pack();
 	}
+	
 
 	@Override
 	public void windowOpened(WindowEvent e) {

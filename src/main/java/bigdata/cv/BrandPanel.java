@@ -3,8 +3,7 @@
  */
 package bigdata.cv;
 
-import static bigdata.cv.IconUtil.icon;
-import static bigdata.cv.IconUtil.iconButton;
+import static bigdata.cv.IconUtil.*;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -35,8 +34,10 @@ import javax.imageio.ImageIO;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -58,6 +59,8 @@ import dataset.Util;
 
 @SuppressWarnings({ "rawtypes", "serial", "unchecked" })
 public class BrandPanel extends JPanel implements Tool {
+	
+	JFrame frame;
 
 	JTable plateNoTable;
 
@@ -182,7 +185,15 @@ public class BrandPanel extends JPanel implements Tool {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2) {
-					brandSelector.setVisible(true);	
+//					brandSelector.setVisible(true);
+					int r = JOptionPane.showConfirmDialog(frame, brandSelector, "Brand Selector", JOptionPane.OK_CANCEL_OPTION);
+					if (r == JOptionPane.OK_OPTION) {
+						String fc = brandSelector.getFullBrandCode();						
+						if (cbModel.getIndexOf(fc) != -1) {
+							cbModel.addElement(fc);
+						}
+						cbOtherFullBrand.setSelectedItem(fc);
+					}
 				}
 			}
 		});
@@ -232,7 +243,7 @@ public class BrandPanel extends JPanel implements Tool {
 		btnPre.addActionListener(new PreActionListener());
 		markAsUnknown.addActionListener(new MarkAsUnknowAction());
 
-		brandSelector = new BrandSelector(cbOtherFullBrand, recentUsed);
+		 
 	}
 
 	private void refreshBrandTable() throws SQLException {
