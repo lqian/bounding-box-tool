@@ -251,12 +251,92 @@ public class BrandSelector extends JPanel  {
 		Integer brand;
 		String brandNameCN;
 		List<SubBrand> subBrands = new ArrayList<>();
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((brand == null) ? 0 : brand.hashCode());
+			result = prime * result + ((brandNameCN == null) ? 0 : brandNameCN.hashCode());
+			return result;
+		}
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Brand other = (Brand) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (brand == null) {
+				if (other.brand != null)
+					return false;
+			} else if (!brand.equals(other.brand))
+				return false;
+			if (brandNameCN == null) {
+				if (other.brandNameCN != null)
+					return false;
+			} else if (!brandNameCN.equals(other.brandNameCN))
+				return false;
+			return true;
+		}
+		private BrandSelector getOuterType() {
+			return BrandSelector.this;
+		}
+		
+		
 	}
 	class SubBrand {
 		Brand brand;
 		Integer subBrand;
 		String subBrandNameCN;
 		List<Model> models = new ArrayList<>();
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((brand == null) ? 0 : brand.hashCode());
+			result = prime * result + ((models == null) ? 0 : models.hashCode());
+			result = prime * result + ((subBrand == null) ? 0 : subBrand.hashCode());
+			return result;
+		}
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SubBrand other = (SubBrand) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (brand == null) {
+				if (other.brand != null)
+					return false;
+			} else if (!brand.equals(other.brand))
+				return false;
+			if (models == null) {
+				if (other.models != null)
+					return false;
+			} else if (!models.equals(other.models))
+				return false;
+			if (subBrand == null) {
+				if (other.subBrand != null)
+					return false;
+			} else if (!subBrand.equals(other.subBrand))
+				return false;
+			return true;
+		}
+		private BrandSelector getOuterType() {
+			return BrandSelector.this;
+		}
+		
+		
 
 	}
 
@@ -264,6 +344,36 @@ public class BrandSelector extends JPanel  {
 		SubBrand subbrand;
 		Integer model;
 		String fullNameCNs;
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((fullNameCNs == null) ? 0 : fullNameCNs.hashCode());
+			return result;
+		}
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Model other = (Model) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (fullNameCNs == null) {
+				if (other.fullNameCNs != null)
+					return false;
+			} else if (!fullNameCNs.equals(other.fullNameCNs))
+				return false;
+			return true;
+		}
+		private BrandSelector getOuterType() {
+			return BrandSelector.this;
+		}
+		
 	}
 
 	class CancelActionListener implements ActionListener {
@@ -298,18 +408,30 @@ public class BrandSelector extends JPanel  {
 			if (e.getStateChange() == ItemEvent.SELECTED) {
 				int si = cbModel.getSelectedIndex();
 				if (si > -1) {
+					cbBrand.removeItemListener(brandChangeListener);
+					cbSubBrand.removeItemListener(subBrandChangeListener);
+					
 					siModel = si;
 					selectedModel =  modelFilters.get(si);
 					selectedSubBrand = selectedModel.subbrand;
 					selectedBrand = selectedSubBrand.brand;
-					brandFilters.clear();					
-					subBrandFilters.clear();
-					cbBrand.removeItemListener(brandChangeListener);
-					cbSubBrand.removeItemListener(subBrandChangeListener);
-					subBrandFilters.add(selectedSubBrand);
-					brandFilters.add(selectedBrand);
-					cbBrand.setSelectedItem(selectedBrand.brandNameCN);
-					cbSubBrand.setSelectedItem(selectedSubBrand.subBrandNameCN);
+					
+					String bn = selectedBrand.brandNameCN;
+					if (!brandFilters.contains(selectedBrand)) {
+						cbBrand.addItem(bn);
+						brandFilters.add(selectedBrand);
+					}
+					cbBrand.setSelectedItem(bn);
+					
+					String sbn = selectedSubBrand.subBrandNameCN;
+					if (!subBrandFilters.contains(selectedSubBrand)) {
+						cbSubBrand.addItem(sbn);
+						subBrandFilters.add(selectedSubBrand);
+					}
+					cbSubBrand.setSelectedItem(sbn);
+					
+					cbBrand.setSelectedItem(bn);
+					cbSubBrand.setSelectedItem(sbn);
 					cbBrand.addItemListener(brandChangeListener);
 					cbSubBrand.addItemListener(subBrandChangeListener);
 				}
@@ -353,7 +475,6 @@ public class BrandSelector extends JPanel  {
 
 	class SubBrandChangeListener implements ItemListener {
 
-		@SuppressWarnings("unlikely-arg-type")
 		@Override
 		public void itemStateChanged(ItemEvent e) {
 			if (e.getStateChange() == ItemEvent.SELECTED) {
@@ -364,7 +485,7 @@ public class BrandSelector extends JPanel  {
 					modelFilters = selectedSubBrand.models;
 					cbBrand.removeItemListener(brandChangeListener);
 //					cbBrand.removeAllItems();
-					if (!brandFilters.contains(selectedBrand.brandNameCN)) {
+					if (!brandFilters.contains(selectedBrand)) {
 						cbBrand.addItem(selectedBrand.brandNameCN);
 					}
 					cbBrand.setSelectedItem(selectedBrand.brandNameCN);

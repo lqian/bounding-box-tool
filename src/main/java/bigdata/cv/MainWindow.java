@@ -42,9 +42,6 @@ import javax.swing.UIManager;
 public class MainWindow implements WindowListener {
 
 	
-	
-	
-	
 	Tool current = null;
 	
 	JFrame frame;
@@ -170,10 +167,10 @@ public class MainWindow implements WindowListener {
 						JOptionPane.OK_CANCEL_OPTION, 
 						JOptionPane.PLAIN_MESSAGE);
 				if (r == JOptionPane.OK_OPTION) {
-					switchPanel("brandPanel");
 					try {
 						brandPanel.fullBrandCode = brandSelector.getFullBrandCode();
 						brandPanel.initData();
+						switchPanel("brandPanel");
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}  

@@ -116,7 +116,8 @@ public class ImageSearchPanel extends Panel implements Tool {
 					if (chooser.showSaveDialog(ImageSearchPanel.this) == JFileChooser.APPROVE_OPTION) {
 						try {
 							fileNameTextArea.setText(chooser.getSelectedFile().getCanonicalPath());
-						} catch (IOException e1) {
+							doSearch();
+						} catch (Exception e1) {
 							e1.printStackTrace();
 						}
 					}

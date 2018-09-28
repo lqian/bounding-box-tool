@@ -185,8 +185,9 @@ public class BrandPanel extends JPanel implements Tool {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2) {
-//					brandSelector.setVisible(true);
-					int r = JOptionPane.showConfirmDialog(frame, brandSelector, "Brand Selector", JOptionPane.OK_CANCEL_OPTION);
+					brandSelector = BrandSelector.getInstance();
+					int r = JOptionPane.showConfirmDialog(frame, brandSelector, "Brand Selector: ", JOptionPane.OK_CANCEL_OPTION, 
+							JOptionPane.PLAIN_MESSAGE);
 					if (r == JOptionPane.OK_OPTION) {
 						String fc = brandSelector.getFullBrandCode();						
 						if (cbModel.getIndexOf(fc) != -1) {
@@ -640,11 +641,11 @@ public class BrandPanel extends JPanel implements Tool {
 			try {
 				updatableSet.first();
 				do {
-					//					String file = updatableSet.getString("path");
-					//					Path p = Paths.get(file);
-					//					if (Files.exists(p)) {
-					//						Files.delete(p);
-					//					}
+					String file = updatableSet.getString("path");
+					Path p = Paths.get(file);
+					if (Files.exists(p)) {
+						Files.delete(p);
+					}
 					updatableSet.updateInt("deprecated", 1);
 					updatableSet.updateRow();
 				} while (updatableSet.next());
