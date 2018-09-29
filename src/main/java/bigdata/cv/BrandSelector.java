@@ -224,7 +224,7 @@ public class BrandSelector extends JPanel  {
 
 	public String getFullBrandCode() {
 		return String.format("%04d%03d%03d", selectedBrand.brand, 
-				selectedSubBrand.subBrand, selectedSubBrand.models.get(siModel).model);
+				selectedSubBrand.subBrand, selectedModel.model);
 	}
 
 	JComboBox<String> cbBrand, cbSubBrand, cbModel;
