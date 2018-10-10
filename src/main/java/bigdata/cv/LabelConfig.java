@@ -21,8 +21,8 @@ package bigdata.cv;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,10 +33,9 @@ public class LabelConfig {
 	Map<String, String> aliasMap = new HashMap<>();
 	Map<String, String> idsMap = new HashMap<>();
 
-	public LabelConfig() throws IOException {
-		InputStream is = this.getClass().getResourceAsStream("/label.names");
+	public LabelConfig(Path path) throws IOException {
 		ArrayList<String> names = new ArrayList<>();
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+		try (BufferedReader reader = Files.newBufferedReader(path)) {
 			String line = null;
 			while ((line = reader.readLine()) != null) {
 				String tokens[] = line.split("=", 2);

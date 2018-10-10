@@ -34,7 +34,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 
 /**
- * @author qian xiafei
+ * @author lqian
  *
  */
 @SuppressWarnings("serial")
@@ -46,9 +46,7 @@ public class FilterDialog extends JDialog {
 	
 	public FilterDialog(LabelPanel labelPanel, boolean modal) {
 //		super(mainWindow.getParent(), modal);
-		this.labelPanel = labelPanel;
-		
-		initialize();
+		this.labelPanel = labelPanel;  
 	}
 
 	void initialize() {

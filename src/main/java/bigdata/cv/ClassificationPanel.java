@@ -357,18 +357,15 @@ public class ClassificationPanel extends JPanel implements Tool {
 		dataModel.clean();
 	}
 
-	
 
 	@Override
 	public void saveCurrentWork() {
-		// TODO Auto-generated method stub
 
 	}
 
 	@Override
 	public void addButtons() {
-		// TODO Auto-generated method stub
-
+		
 	}
 
 }

@@ -3,7 +3,8 @@
  */
 package bigdata.cv;
 
-import static bigdata.cv.IconUtil.*;
+import static bigdata.cv.IconUtil.icon;
+import static bigdata.cv.IconUtil.iconButton;
 import static javax.swing.JOptionPane.YES_NO_OPTION;
 import static javax.swing.JOptionPane.YES_OPTION;
 import static javax.swing.JOptionPane.showConfirmDialog;
@@ -53,11 +54,6 @@ public class LabelPanel extends JPanel implements Tool {
 	}
 
 	void initialComponents() {
-		try {
-			labelConfig = new LabelConfig();
-		} catch (IOException e) {
-			throw new RuntimeException(e); 
-		}
 		
 		btnOpen = iconButton("open.gif", "open dataset");
 		btnOpen.addActionListener(new OpenFileAction());
@@ -192,13 +188,10 @@ public class LabelPanel extends JPanel implements Tool {
 		lblResolution = new JLabel("");
 		statusPanel.add(lblResolution);
 
-		filterDialog = new FilterDialog(this, true);
+		
 	}
 
 	void initActions() {
-		
-		
-		imagePanel.labelConfig = labelConfig;
 		imagePanel.listener = new ImagePanelListener() {
 
 			@Override
@@ -440,6 +433,7 @@ public class LabelPanel extends JPanel implements Tool {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				FilterDialog filterDialog = new FilterDialog(LabelPanel.this, true);
 				filterDialog.setVisible(true);
 				filterDialog.setAlwaysOnTop(true);
 				filterDialog.setLocationRelativeTo(frame);
@@ -473,7 +467,7 @@ public class LabelPanel extends JPanel implements Tool {
 
 	ImagePanel imagePanel = new ImagePanel();
 	MonitorPanel monitorPanel = new MonitorPanel();
-
+	
 
 
 	JButton btnFirst;
@@ -522,7 +516,7 @@ public class LabelPanel extends JPanel implements Tool {
 
 	Set<String> filterClazz = new HashSet<>();
 
-	FilterDialog filterDialog;
+	
 
 	private JButton btnAutoForward;
 	JPanel annotationPanel = new JPanel(new BorderLayout());
@@ -548,7 +542,16 @@ public class LabelPanel extends JPanel implements Tool {
 					txtDirectory.setText(chooser.getSelectedFile().getAbsolutePath());
 					monitorPanel.clearImage();
 				}
-				loadImageThread = new LoadImageThread(chooser.getSelectedFile().toPath());
+				
+				Path path = chooser.getSelectedFile().toPath();
+				try {
+					labelConfig = new LabelConfig(path.resolve("label.names"));
+					imagePanel.labelConfig = labelConfig;
+				} catch (IOException ioe) {
+					throw new RuntimeException(ioe); 
+				}
+				
+				loadImageThread = new LoadImageThread(path);
 				loadImageThread.start();
 			}
 		}

@@ -23,6 +23,10 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -42,8 +46,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
+import javax.swing.ButtonGroup;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.SpringLayout;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -98,6 +105,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	boolean enabled = false;
 
 	LabelConfig labelConfig;
+	
+	LabelNamesPanel labelNamesPanel;
 
 	public ImagePanel() {
 		super();
@@ -181,10 +190,19 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public String showLabelDialog() {
-		String label = (String) JOptionPane.showInputDialog(this, "select one label:", "", JOptionPane.PLAIN_MESSAGE,
-				null, labelConfig.clazzNames, null);
-
-		return label;
+		
+		if (labelNamesPanel == null) {
+			labelNamesPanel = new LabelNamesPanel();
+		}
+		
+		int r = JOptionPane.showConfirmDialog(this,  labelNamesPanel, "select one label name:", 
+				JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE );
+		if (r == JOptionPane.OK_OPTION) {
+			return labelNamesPanel.selected();
+		}
+		else {
+			return null;
+		}
 	}
 
 	public void saveLabelsToFile() {
@@ -462,15 +480,12 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		// last or selected bounding box
 		LabeledBoundingBox bb = null ;
 		if (selectBoundingBoxIndex == -1) {
-			int size = boundingBoxes.size();
-			if (size > 0) {
-				bb = boundingBoxes.get(size - 1);
-			}
+			 return;
 		}
 		else {
 			bb = boundingBoxes.get(selectBoundingBoxIndex);
 		}
-		if (bb == null ) return;
+		 
 
 		switch (key) {
 		case 'A':
@@ -560,6 +575,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		bb.x += 1;
 		bb.y += 1;
 	}
+	
 	void expand(LabeledBoundingBox bb) {
 		bb.h += 2;
 		bb.w += 2;
@@ -580,5 +596,51 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 	void expandBottom(LabeledBoundingBox bb){
 		bb.h += 1;
+	}
+	
+	@SuppressWarnings("serial")
+	class LabelNamesPanel extends JPanel {
+		
+		ButtonGroup group = new ButtonGroup();
+		
+		int idx = -1;
+		
+		public LabelNamesPanel() {
+			setLayout(new GridBagLayout());
+			GridBagConstraints gbc = new GridBagConstraints();
+			gbc.fill = GridBagConstraints.BOTH;
+			gbc.anchor = GridBagConstraints.WEST; 
+			gbc.gridwidth = 1;
+			
+			int l = labelConfig.clazzNames.length;
+			for (int i=0; i<l; i++) {
+				gbc.gridy = i / 3;
+				gbc.gridx = i % 3;
+				JRadioButton rb = new JRadioButton(labelConfig.clazzNames[i]);
+				rb.addActionListener(new LabelNamesListener(this, i));
+				add(rb, gbc);
+				group.add(rb);
+			}
+		}
+		
+		String selected() { return labelConfig.clazzNames[idx]; }
+	}
+	
+	class LabelNamesListener implements ActionListener {
+		
+		LabelNamesPanel labelNamesPanel;
+		
+		int idx;
+
+		public LabelNamesListener(LabelNamesPanel labelNamesPanel, int idx) {
+			super();
+			this.labelNamesPanel = labelNamesPanel;
+			this.idx = idx;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			labelNamesPanel.idx = this.idx;
+		}
 	}
 }
