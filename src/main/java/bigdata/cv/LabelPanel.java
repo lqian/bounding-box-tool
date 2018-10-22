@@ -159,10 +159,10 @@ public class LabelPanel extends JPanel implements Tool {
 
 		 
 
-		btnFirst =iconButton("first.png", "");
-		btnPreviouse = iconButton("previous.png", "");
-		btnNext = iconButton("next.png", "");
-		btnLast = iconButton("last.png", "");
+		btnFirst =iconButton("first.png", "skip to first sample of current dataset");
+		btnPreviouse = iconButton("previous.png", "skip to previous sample of current dataset");
+		btnNext = iconButton("next.png", "skip to next sample of current dataset");
+		btnLast = iconButton("last.png", "skip to last sample of current dataset");
 
 		JLabel lblTotalImage = new JLabel("Total Image:");
 		statusPanel.add(lblTotalImage);

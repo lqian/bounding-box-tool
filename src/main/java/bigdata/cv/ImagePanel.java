@@ -319,12 +319,16 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 				g2d.setColor(Color.MAGENTA);
 				g2d.setStroke(new BasicStroke(3f));
 				g2d.drawRect(showX + bx, showY + by, bw, bh);
-				
+
 				if (image != null) {
-					BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
-					this.listener.postSelectedImage(sub);
+					int iw = image.getWidth();
+					int ih = image.getHeight();
+					if (bb.x + bb.w < iw && bb.y + bb.h < ih) {
+						BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
+						this.listener.postSelectedImage(sub);
+					}
 				}
-				
+
 			} else {
 				g2d.setStroke(new BasicStroke(1f));
 				g2d.setColor(Color.WHITE);
@@ -537,10 +541,12 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 			
 		}
 		repaint();
-		BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
-		listener.postChange(sub);
-		listener.postChangeLabel(selectBoundingBoxIndex, bb);
-		hasChanged = true;
+		if (bb.w > 0 && bb.h > 0) {
+			BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
+			listener.postChange(sub);
+			listener.postChangeLabel(selectBoundingBoxIndex, bb);
+			hasChanged = true;
+		}
 	}
 
 	@Override

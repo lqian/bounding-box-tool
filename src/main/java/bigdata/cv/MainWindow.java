@@ -190,7 +190,12 @@ public class MainWindow implements WindowListener {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				switchPanel("imageSearchPanel");
+				try {
+					imageSearchPanel.initComponenets();
+					switchPanel("imageSearchPanel");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 	}
