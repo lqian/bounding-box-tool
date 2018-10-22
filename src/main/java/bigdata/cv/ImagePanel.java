@@ -317,7 +317,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 			int bh = (int) (bb.h / scaleFactor);
 			if (i == selectBoundingBoxIndex) {
 				g2d.setColor(Color.MAGENTA);
-				g2d.setStroke(new BasicStroke(5f));
+				g2d.setStroke(new BasicStroke(3f));
 				g2d.drawRect(showX + bx, showY + by, bw, bh);
 				
 				if (image != null) {
@@ -530,6 +530,11 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		case 'R':
 			shrink(bb);
 			break;
+		case 'B':  shrinkWidth(bb); break;
+		case 'N': shrinkHeight(bb); break;
+		case 'M': expandWidth(bb); break;
+		case ',': expandHeight(bb); break;
+			
 		}
 		repaint();
 		BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
@@ -555,6 +560,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	void moveUp(LabeledBoundingBox bb){
 		bb.y -= 1;
 	}
+	
+	
 	void shrinkLeft(LabeledBoundingBox bb) {
 		bb.x += 1;
 		bb.w -= 1;
@@ -576,12 +583,33 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		bb.y += 1;
 	}
 	
+	void shrinkHeight(LabeledBoundingBox bb) {
+		bb.y +=1;
+		bb.h -=2;
+	}
+	
+	void shrinkWidth(LabeledBoundingBox bb) {
+		bb.x += 1;
+		bb.w -= 2;
+	}
+	
 	void expand(LabeledBoundingBox bb) {
 		bb.h += 2;
 		bb.w += 2;
 		bb.x -= 1;
 		bb.y -= 1;
 	}
+	
+	void expandHeight(LabeledBoundingBox bb) {
+		bb.y -= 1;
+		bb.h += 2;
+	}
+	
+	void expandWidth(LabeledBoundingBox bb) {
+		bb.x -= 1;
+		bb.w += 2;
+	}
+	
 	void expandLeft(LabeledBoundingBox bb) {
 
 		bb.x -= 1;
