@@ -157,7 +157,6 @@ public class LabelPanel extends JPanel implements Tool {
 		flowLayout.setHgap(10);
 		panel.add(statusPanel);
 
-		 
 
 		btnFirst =iconButton("first.png", "skip to first sample of current dataset");
 		btnPreviouse = iconButton("previous.png", "skip to previous sample of current dataset");
@@ -187,10 +186,9 @@ public class LabelPanel extends JPanel implements Tool {
 
 		lblResolution = new JLabel("");
 		statusPanel.add(lblResolution);
-
-		
 	}
-
+	
+	 
 	void initActions() {
 		imagePanel.listener = new ImagePanelListener() {
 
@@ -240,19 +238,8 @@ public class LabelPanel extends JPanel implements Tool {
 			}
 		};
 
-		tblBoudingBox.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				if (!e.getValueIsAdjusting()) {
-					ListSelectionModel lsm = (ListSelectionModel) e.getSource();
-					int msi = lsm.getMinSelectionIndex();
-					imagePanel.selectBoundingBox(msi);
-					imagePanel.requestFocusInWindow();
-				}
-			}
-		});
-
+		tblBoudingBox.getSelectionModel().addListSelectionListener(boundingBoxListSelectionListener);
+		
 		btnRemoveBoundingBox.addActionListener(new ActionListener() {
 
 			@Override
@@ -468,7 +455,7 @@ public class LabelPanel extends JPanel implements Tool {
 	ImagePanel imagePanel = new ImagePanel();
 	MonitorPanel monitorPanel = new MonitorPanel();
 	
-
+	
 
 	JButton btnFirst;
 	JButton btnPreviouse;
@@ -480,6 +467,21 @@ public class LabelPanel extends JPanel implements Tool {
 
 	JTable tblBoudingBox;
 	DefaultTableModel tableModel;
+	
+	ListSelectionListener boundingBoxListSelectionListener = new ListSelectionListener() {
+
+		@Override
+		public void valueChanged(ListSelectionEvent e) {
+			if (!e.getValueIsAdjusting()) {
+				ListSelectionModel lsm = (ListSelectionModel) e.getSource();
+				int msi = lsm.getMinSelectionIndex();
+				if (msi < 0) return ;
+				imagePanel.selectBoundingBox(msi);
+				imagePanel.requestFocusInWindow();
+			}
+		}
+	};
+	
 	private JButton btnCleanBoundingBox;
 	private JButton btnRemoveBoundingBox;
 
@@ -516,7 +518,6 @@ public class LabelPanel extends JPanel implements Tool {
 
 	Set<String> filterClazz = new HashSet<>();
 
-	
 
 	private JButton btnAutoForward;
 	JPanel annotationPanel = new JPanel(new BorderLayout());
@@ -607,7 +608,10 @@ public class LabelPanel extends JPanel implements Tool {
 		if (currentImageIndex >= imageFiles.size())
 			currentImageIndex = 0;
 		monitorPanel.clearImage();
+		ListSelectionModel selectionModel = tblBoudingBox.getSelectionModel();
+		selectionModel.removeListSelectionListener(boundingBoxListSelectionListener);
 		imagePanel.load(imageFiles.get(currentImageIndex));
+		selectionModel.addListSelectionListener(boundingBoxListSelectionListener);
 		lblFileName.setText(imageFiles.get(currentImageIndex));
 		lblCurrentImageIndex.setText(String.valueOf(currentImageIndex));
 	}
@@ -677,8 +681,8 @@ public class LabelPanel extends JPanel implements Tool {
 				autoLocateImage();
 				btnDelete.setEnabled(true);
 				imagePanel.enabled = true;
-				//				CardLayout layout = (CardLayout)frame.getContentPane().getLayout();
-				//				cardLayout.show(cards, "annotationPanel");
+				// CardLayout layout = (CardLayout)frame.getContentPane().getLayout();
+				// cardLayout.show(cards, "annotationPanel");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

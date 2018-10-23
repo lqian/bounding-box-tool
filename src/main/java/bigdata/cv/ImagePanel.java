@@ -50,7 +50,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.SpringLayout;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -77,6 +76,8 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	 * copred bounding boxes
 	 */
 	ArrayList<LabeledBoundingBox> boundingBoxes = new ArrayList<LabeledBoundingBox>();
+	
+	LabeledBoundingBox workingBoudingBox = null ;
 
 	// x1, y1, x2, y2 of corp bounding box
 	int corpX1, corpY1, corpX2, corpY2;
@@ -124,6 +125,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	public void selectBoundingBox(int index) {
 		selectBoundingBoxIndex = index;
+		workingBoudingBox = boundingBoxes.get(index);
 		repaint();
 	}
 
@@ -139,7 +141,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		selectBoundingBoxIndex = -1;
 		hasDragged = false;
 		scaleImage = null;
-
+		
 		while (tableModel.getRowCount() > 0) {
 			tableModel.removeRow(0);
 		}
@@ -231,6 +233,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	public void removeBoundingBox(int i) {
 		selectBoundingBoxIndex = -1;
+		workingBoudingBox = null;
 		boundingBoxes.remove(i);
 		tableModel.removeRow(i);
 		hasChanged = true;
@@ -239,6 +242,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	public void removeAllBoundingBox() {
 		selectBoundingBoxIndex = -1;
+		workingBoudingBox = null;
 		while (tableModel.getRowCount() > 0) {
 			tableModel.removeRow(0);
 		}
@@ -369,11 +373,16 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 							showX, showY);
 					boundingBoxes.add(bb);
 					tableModel.addRow(new Object[] { label, bb.boundingBoxString() });
-					corpStatus = CorpStatus.unkonw;
-					
+					this.workingBoudingBox = bb;
 					BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
 					listener.postCorp(sub);
 					this.selectBoundingBoxIndex = -1;
+					repaint();
+					corpStatus = CorpStatus.unkonw;
+				}
+				else {
+					// cancel selected box
+					corpStatus = CorpStatus.unkonw;
 					repaint();
 				}
 			}
@@ -482,69 +491,62 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		int key = e.getKeyCode();
 
 		// last or selected bounding box
-		LabeledBoundingBox bb = null ;
-		if (selectBoundingBoxIndex == -1) {
-			 return;
-		}
-		else {
-			bb = boundingBoxes.get(selectBoundingBoxIndex);
-		}
-		 
+		if (workingBoudingBox == null) return;
 
 		switch (key) {
 		case 'A':
-			moveLeft(bb);
+			moveLeft(workingBoudingBox);
 			break;
 		case 'S':
-			moveDown(bb);
+			moveDown(workingBoudingBox);
 			break;
 		case 'D':
-			moveRight(bb);
+			moveRight(workingBoudingBox);
 			break;
 		case 'W':
-			moveUp(bb);
+			moveUp(workingBoudingBox);
 			break;
 		case 'Y':
-			expandLeft(bb);
+			expandLeft(workingBoudingBox);
 			break;
 		case 'U':
-			expandRight(bb);
+			expandRight(workingBoudingBox);
 			break;
 		case 'I':
-			expandTop(bb);
+			expandTop(workingBoudingBox);
 			break;
 		case 'O':
-			expandBottom(bb);
+			expandBottom(workingBoudingBox);
 			break;
 		case 'E':
-			expand(bb);
+			expand(workingBoudingBox);
 			break;				
 		case 'H':
-			shrinkLeft(bb);
+			shrinkLeft(workingBoudingBox);
 			break;
 		case 'J':
-			shrinkRight(bb);
+			shrinkRight(workingBoudingBox);
 			break;
 		case 'K':
-			shrinkTop(bb);
+			shrinkTop(workingBoudingBox);
 			break;
 		case 'L':
-			shrinkBottom(bb);
+			shrinkBottom(workingBoudingBox);
 			break;
 		case 'R':
-			shrink(bb);
+			shrink(workingBoudingBox);
 			break;
-		case 'B':  shrinkWidth(bb); break;
-		case 'N': shrinkHeight(bb); break;
-		case 'M': expandWidth(bb); break;
-		case ',': expandHeight(bb); break;
+		case 'B':  shrinkWidth(workingBoudingBox); break;
+		case 'N': shrinkHeight(workingBoudingBox); break;
+		case 'M': expandWidth(workingBoudingBox); break;
+		case ',': expandHeight(workingBoudingBox); break;
 			
 		}
 		repaint();
-		if (bb.w > 0 && bb.h > 0) {
-			BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
+		if (workingBoudingBox.w > 0 && workingBoudingBox.h > 0) {
+			BufferedImage sub = image.getSubimage(workingBoudingBox.x, workingBoudingBox.y, workingBoudingBox.w, workingBoudingBox.h);
 			listener.postChange(sub);
-			listener.postChangeLabel(selectBoundingBoxIndex, bb);
+			listener.postChangeLabel(selectBoundingBoxIndex, workingBoudingBox);
 			hasChanged = true;
 		}
 	}
