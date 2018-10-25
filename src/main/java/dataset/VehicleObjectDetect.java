@@ -48,14 +48,14 @@ public class VehicleObjectDetect {
 			List<ImageResult> results = json.seemooResult.imageResults;
 			if (Files.exists(samplePath) && results != null && results.size() > 0) {
 				BufferedImage image = ImageIO.read(samplePath.toFile());
-				float w = image.getWidth();
-				float h = image.getHeight();
+				float iw = image.getWidth();
+				float ih = image.getHeight();
 				Path p = Paths.get(json.image.replaceFirst("\\.jpg", ".txt").replaceFirst("JPEGImages", "labels") );
 				Path dir = p.getParent();
 				
-				if (Files.notExists(dir)) {
-					Files.createDirectories(dir);
-				}
+//				if (Files.notExists(dir)) {
+//					Files.createDirectories(dir);
+//				}
 				c++;
 				List<Vehicle> vehicles = results.get(0).vehicles;
 				if (vehicles !=null && vehicles.size() > 0) {
@@ -63,10 +63,11 @@ public class VehicleObjectDetect {
 					for (Vehicle v: vehicles) {
 						List<Integer> rect = v.detect.body.Rect;
 						Top top = v.recognize.type.topList.get(0);
-						float yx = ((2 * rect.get(0) + w) / 2 -1 ) / w;
-						float yy = ((2 * rect.get(1) + h) / 2 -1 ) / h;
-						float yw = rect.get(2) / w;
-						float yh = rect.get(3) / h;
+						// center of box relative to samples' width and height
+						float yx = ((2 * rect.get(0) + rect.get(2)) / 2 -1 ) / iw;  
+						float yy = ((2 * rect.get(1) + rect.get(3)) / 2 -1 ) / ih;
+						float yw = rect.get(2) / iw;
+						float yh = rect.get(3) / ih;
 						String outLine = String.format("%d %f %f %f %f", Integer.parseInt(top.code)-1, yx, yy, yw, yh);
 						label.write(outLine);
 						label.newLine();
@@ -77,11 +78,11 @@ public class VehicleObjectDetect {
 					System.out.format("convert %d samples \n", c);
 				}
 				if (c % 10 == 0) {
-					valList.write(p.toString());
+					valList.write(samplePath.toString());
 					valList.newLine();
 				}
 				else {
-					trainList.write(p.toString());
+					trainList.write(samplePath.toString());
 					trainList.newLine();
 				}
 			}
