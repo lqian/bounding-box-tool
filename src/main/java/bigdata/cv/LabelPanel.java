@@ -233,7 +233,7 @@ public class LabelPanel extends JPanel implements Tool {
 
 			@Override
 			public void postChangeLabel(int row, LabeledBoundingBox bb) {
-				if (tableModel.getRowCount() > 0)
+				if (tableModel.getRowCount() > 0 && row > -1)
 					tableModel.setValueAt(bb.boundingBoxString(), row, 1);
 			}
 		};

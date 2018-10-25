@@ -124,6 +124,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public void selectBoundingBox(int index) {
+		if (index < 0) return ;
 		selectBoundingBoxIndex = index;
 		workingBoudingBox = boundingBoxes.get(index);
 		repaint();
