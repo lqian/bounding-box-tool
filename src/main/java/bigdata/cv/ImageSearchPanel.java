@@ -56,16 +56,16 @@ public class ImageSearchPanel extends Panel implements Tool {
 	private IndexReader indexReader;
 	
 	SimpleImageFrame frame;
+	
+	boolean initialized = false;
 
 	public ImageSearchPanel() {
-		try {
-			initComponenets();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		 
 	}
 
-	private void initComponenets() throws IOException {
+	void initComponenets() throws IOException {
+		
+		if (initialized) return ;
 		
 		indexReader = DirectoryReader.open(FSDirectory.open(Paths.get(indexDir)));
 		
@@ -160,6 +160,8 @@ public class ImageSearchPanel extends Panel implements Tool {
 				}
 			}
 		});
+		
+		initialized = true;
 	}
 
 	@Override
