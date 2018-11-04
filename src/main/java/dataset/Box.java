@@ -13,6 +13,10 @@ class Box  {
 	
 	public static Box parse(String str) {
 		String tokens[] = str.split(",");
-		return new Box(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3]));
+		if (tokens.length != 4) return null;
+		return new Box(Integer.parseInt(tokens[0]), 
+				Integer.parseInt(tokens[1]), 
+				Integer.parseInt(tokens[2]), 
+				Integer.parseInt(tokens[3]));
 	}
 }
