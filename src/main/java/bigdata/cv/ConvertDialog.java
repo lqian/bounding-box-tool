@@ -339,7 +339,8 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		pane.add(lblStatus, gbc);
 		
 		btnConvert = new JButton("Convert");
-		btnConvert.setEnabled(false);
+		if (dataSet == null)
+			btnConvert.setEnabled(false);
 		gbc.gridx = 6;
 		gbc.gridwidth = 1;
 		gbc.gridy = 5;
