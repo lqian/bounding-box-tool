@@ -375,6 +375,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 					boundingBoxes.add(bb);
 					tableModel.addRow(new Object[] { label, bb.boundingBoxString() });
 					this.workingBoudingBox = bb;
+					check(workingBoudingBox);
 					BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
 					listener.postCorp(sub);
 					this.selectBoundingBoxIndex = -1;
@@ -537,12 +538,12 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		case 'R':
 			shrink(workingBoudingBox);
 			break;
-		case 'B':  shrinkWidth(workingBoudingBox); break;
+		case 'B': shrinkWidth(workingBoudingBox); break;
 		case 'N': shrinkHeight(workingBoudingBox); break;
 		case 'M': expandWidth(workingBoudingBox); break;
 		case ',': expandHeight(workingBoudingBox); break;
-			
 		}
+		check(workingBoudingBox);
 		repaint();
 		if (workingBoudingBox.w > 0 && workingBoudingBox.h > 0) {
 			BufferedImage sub = image.getSubimage(workingBoudingBox.x, workingBoudingBox.y, workingBoudingBox.w, workingBoudingBox.h);
@@ -568,6 +569,17 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 
 	void moveUp(LabeledBoundingBox bb){
 		bb.y -= 1;
+	}
+	
+	void check(LabeledBoundingBox bb) {
+		if (bb.x < 0) bb.x = 0;
+		if (bb.x >= imageWidth) bb.x = imageWidth - 1;
+		if (bb.y < 0) bb.y = 0;
+		if (bb.y >= imageHeight) bb.y = imageHeight - 1;
+		if (bb.x + bb.w > imageWidth) bb.w = imageWidth - bb.x;
+		if (bb.y + bb.h > imageHeight) bb.h = imageHeight - bb.y;
+		if (bb.w < 1) bb.w = 1;
+		if (bb.h < 1) bb.h = 1;
 	}
 	
 	
