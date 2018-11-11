@@ -47,8 +47,6 @@ import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SpringLayout;
 
-import static bigdata.cv.IconUtil.icon;
-
 /**
  * @author lqian
  *

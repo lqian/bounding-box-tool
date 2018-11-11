@@ -34,6 +34,4 @@ public class Util {
 				"root", "");
 		return conn;
 	}
-	
-
 }

@@ -21,6 +21,7 @@ package bigdata.cv;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
@@ -124,7 +125,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 	}
 
 	public void selectBoundingBox(int index) {
-		if (index < 0) return ;
+		if (index < 0 && boundingBoxes.size() < 1) return ;
 		selectBoundingBoxIndex = index;
 		workingBoudingBox = boundingBoxes.get(index);
 		repaint();
@@ -199,7 +200,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		}
 		
 		int r = JOptionPane.showConfirmDialog(this,  labelNamesPanel, "select one label name:", 
-				JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE );
+				JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE );
 		if (r == JOptionPane.OK_OPTION) {
 			return labelNamesPanel.selected();
 		}
@@ -663,9 +664,10 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 			
 			int l = labelConfig.clazzNames.length;
 			for (int i=0; i<l; i++) {
-				gbc.gridy = i / 3;
-				gbc.gridx = i % 3;
+				gbc.gridy = i / 4;
+				gbc.gridx = i % 4;
 				JRadioButton rb = new JRadioButton(labelConfig.clazzNames[i]);
+				rb.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 16));
 				rb.addActionListener(new LabelNamesListener(this, i));
 				add(rb, gbc);
 				group.add(rb);
