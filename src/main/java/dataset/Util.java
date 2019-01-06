@@ -31,7 +31,7 @@ public class Util {
 		Class.forName("com.mysql.jdbc.Driver");
 		Connection conn = DriverManager.getConnection(
 				"jdbc:mysql://localhost:3306/corpus?useUnicode=yes&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true",
-				"root", "");
+				"root", "123456");
 		return conn;
 	}
 	

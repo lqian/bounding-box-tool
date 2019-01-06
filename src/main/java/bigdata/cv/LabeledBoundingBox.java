@@ -83,7 +83,9 @@ public class LabeledBoundingBox {
 	}
 
 	public boolean isWithin(LabeledBoundingBox other) {
-		return x >= other.x && y >= other.y && x + w <= other.x + other.w && y + h <= other.y + other.h;
+		return x >= other.x && y >= other.y 
+				&& x + w <= other.x + other.w 
+				&& y + h <= other.y + other.h;
 	}
 
 	public boolean isValid() {

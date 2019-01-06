@@ -116,7 +116,17 @@ public class ImageSearchPanel extends Panel implements Tool {
 					if (chooser.showSaveDialog(ImageSearchPanel.this) == JFileChooser.APPROVE_OPTION) {
 						try {
 							fileNameTextArea.setText(chooser.getSelectedFile().getCanonicalPath());
-							doSearch();
+							fileNameTextArea.updateUI();
+							new Thread() {
+								public void run() {try {
+									doSearch();
+								} catch (Exception e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}}
+								
+							}.start();
+							
 						} catch (Exception e1) {
 							e1.printStackTrace();
 						}
@@ -188,9 +198,12 @@ public class ImageSearchPanel extends Panel implements Tool {
 			 int row = i / cols;
 			 int col = i % cols;
 			 ImageFile val = new ImageFile();
-			 val.image = ImageIO.read(new File(f));
-			 val.baseName = Paths.get(f).getFileName().toString();
-			 imageModel.setValueAt(val, row, col);		 
+			 File input = new File(f);
+			 if (input.exists()) {
+				 val.image = ImageIO.read(input);
+				 val.baseName = Paths.get(f).getFileName().toString();
+				 imageModel.setValueAt(val, row, col);
+			 }
 		}		
 		imageModel.fireTableDataChanged();
 	}

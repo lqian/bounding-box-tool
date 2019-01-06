@@ -22,8 +22,6 @@ package bigdata.cv;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Frame;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -34,6 +32,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -47,13 +51,11 @@ import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SpringLayout;
 
-import static bigdata.cv.IconUtil.icon;
-
 /**
  * @author lqian
  *
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({"serial", "unchecked"})
 public class CorpDialog extends JDialog implements ItemListener {
 
 	DataSet source;
@@ -63,6 +65,8 @@ public class CorpDialog extends JDialog implements ItemListener {
 	JTextField sourceTextField;
 
 	JTextField targetTextField;
+	
+	JTextField threadNumTextField = new JTextField("8");
 
 	// JButton btnOpen;
 
@@ -85,12 +89,19 @@ public class CorpDialog extends JDialog implements ItemListener {
 	String selectedOutterClazz;
 
 	JCheckBox innerClazz;
+	
+	AtomicInteger counter = new AtomicInteger(0);
+	
+	CountDownLatch latch;
+	
+	LinkedBlockingQueue<String> queue ;
 
 	public CorpDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
-		super(owner, "convert label", modal);
+		super(owner, "corp dataset", modal);
 		this.source = dataSet;
 		this.labelConfig = labelConfig;
 		selectedOutterClazz = labelConfig.clazzNames[0];
+		
 		initialize();
 
 		initializeActions();
@@ -117,7 +128,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 						source = new DataSet(selectedFile.toPath());
 						sourceTextField.setText(selectedFile.getAbsolutePath());
 					} else {
-						target = new DataSet(selectedFile.toPath());
+						target = new DataSet(selectedFile.toPath(), false);
 						targetTextField.setText(selectedFile.getAbsolutePath());
 					}
 					int sl = sourceTextField.getText().length();
@@ -149,24 +160,22 @@ public class CorpDialog extends JDialog implements ItemListener {
 
 		clazzList.addActionListener(new ActionListener() {
 
-			@Override
-			@SuppressWarnings("unchecked")
+			
 			public void actionPerformed(ActionEvent e) {
 				JComboBox<String> cb = (JComboBox<String>) e.getSource();
 				selectedOutterClazz = (String) cb.getSelectedItem();
 			}
 		});
 	}
-
-	void corpInnerBoxes() throws IOException {
-		int counter = 0;
-		for (String lf : source.rawLabelFiles) {
-			List<LabeledBoundingBox> boxes = source.readBoundingBoxes(lf);
+	
+    void corpSample(String labelFile) {
+    	try {
+			List<LabeledBoundingBox> boxes = source.readBoundingBoxes(labelFile);
 			if (boxes.size() > 0) {
 				List<ObjectBoundingBox> innerBoxes = parseObjectBoxes(boxes);
 				if (innerBoxes.size() > 0) {
-					String name = lf.replace(".label", "");
-					String jpg = lf.replace(".label", ".jpg");
+					String name = labelFile.replace(".label", "");
+					String jpg = labelFile.replace(".label", ".jpg");
 					BufferedImage image = source.readImage(jpg);
 					if (image != null) {
 						int i = 0;
@@ -178,19 +187,77 @@ public class CorpDialog extends JDialog implements ItemListener {
 							int h = ib.outter.h;
 							BufferedImage sub = image.getSubimage(x, y, w, h);
 							target.saveImage(tin, sub);
-							
+
 							if (innerClazz.isSelected()) {
-								String tln = String.format("%s_%d.label", name, i);
+								String tln = String.format("%s_%d.label", name, i++);
 								target.saveRawLabel(tln, w, h, ib.inners);
 							}
-
-							if (counter++ % 10 == 0) {
-								lblStatus.setText("" + counter);
-							}
+							counter.getAndIncrement();
+							
 						}
 					}
 				}
 			}
+		} catch (IOException ioe) {
+			System.out.println(ioe);
+		}
+    }
+    
+    class CorpRunnable implements Runnable  {
+    	@Override
+		public void run() {
+			String lf;
+			try {
+				while ((lf = queue.poll(1, TimeUnit.SECONDS)) != null ) {
+					corpSample(lf);
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			finally {
+				latch.countDown();
+			}
+		}
+    }
+
+	void corpInnerBoxes() throws IOException {
+		counter.set(0);
+		lblStatus.setText("" + counter.get());
+		queue = new LinkedBlockingQueue<>();
+		queue.addAll(source.rawLabelFiles);
+		int threadNum = Integer.parseInt(threadNumTextField.getText());
+		CountDownLatch latch = new CountDownLatch(threadNum);
+		
+		ExecutorService service = Executors.newFixedThreadPool(threadNum);
+		for (int i=0; i< threadNum; i++) {
+			service.submit(new CorpRunnable());
+		}
+		
+		new Thread() {
+
+			@Override
+			public void run() {
+				try {
+					while (!queue.isEmpty()) {
+						Thread.sleep(5000);
+						lblStatus.setText("corp samples" + counter.get());
+						lblStatus.updateUI();
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}.start();
+		corpBtn.setEnabled(false);
+		try {
+			latch.await();
+			service.shutdown();
+			lblStatus.setText("corp samples" + counter.get());
+			lblStatus.updateUI();
+			corpBtn.setEnabled(true);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -231,7 +298,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 		JPanel center = new JPanel(new SpringLayout());
 		getContentPane().add(center, BorderLayout.CENTER);
 
-		JLabel l1 = new JLabel("Source DataSet: ");
+		JLabel l1 = new JLabel("Source DataSet");
 		center.add(l1);
 		sourceTextField = new JTextField(50);
 		sourceTextField.setEditable(false);
@@ -240,7 +307,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 		openSource = new JButton("...");
 		center.add(openSource);
 
-		JLabel l2 = new JLabel("Target DataSet: ");
+		JLabel l2 = new JLabel("Target DataSet");
 		center.add(l2);
 		targetTextField = new JTextField(50);
 		targetTextField.setEditable(false);
@@ -249,7 +316,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 		openTarget = new JButton("...");
 		center.add(openTarget);
 
-		JLabel l3 = new JLabel("Outter clazz: ");
+		JLabel l3 = new JLabel("Outter clazz");
 		center.add(l3);
 		clazzList = new JComboBox<String>(labelConfig.clazzNames);
 		clazzList.setEditable(false);
@@ -259,8 +326,17 @@ public class CorpDialog extends JDialog implements ItemListener {
 //		innerClazz.setToolTipText("checked me include inner boxes");
 		innerClazz.setSelected(true);
 		center.add(innerClazz);
-
-		SpringUtilities.makeCompactGrid(center, 3, 3, // rows, cols
+		
+		
+		JLabel l4 = new JLabel("Corp Thread Number");
+		center.add(l4);
+		l4.setLabelFor(threadNumTextField);
+		center.add(threadNumTextField);
+		corpBtn = new JButton("Corp");
+		corpBtn.setEnabled(false);
+		center.add(corpBtn);
+		
+		SpringUtilities.makeCompactGrid(center, 4, 3, // rows, cols
 				6, 6, // initX, initY
 				6, 6); // xPad, yPad
 
@@ -269,23 +345,10 @@ public class CorpDialog extends JDialog implements ItemListener {
 		}
 
 		JPanel south = new JPanel();
-		south.setLayout(new GridBagLayout());
 		getContentPane().add(south, BorderLayout.SOUTH);
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.fill = GridBagConstraints.BOTH;
-		lblStatus = new JLabel("0");
-		gbc.anchor = GridBagConstraints.WEST;
-		gbc.gridx = 0;
-		gbc.gridy = 0;
-		gbc.gridwidth = 4;
-		south.add(lblStatus, gbc);
+		lblStatus = new JLabel("");
+		south.add(lblStatus);
 
-		corpBtn = new JButton("Corp");
-		corpBtn.setEnabled(false);
-		gbc.anchor = GridBagConstraints.EAST;
-		gbc.gridwidth = 1;
-		gbc.gridx = 4;
-		south.add(corpBtn, gbc);
 
 		pack();
 		setResizable(false);

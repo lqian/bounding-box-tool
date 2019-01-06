@@ -67,8 +67,12 @@ public class DataSet {
 	List<String> imageFiles = new ArrayList<>();
 	List<String> rawLabelFiles = new ArrayList<>();
 	List<String> darknetLabelFiles = new ArrayList<>();
-
+	
 	public DataSet(Path home) throws IOException {
+		this(home, true);
+	}
+
+	public DataSet(Path home, boolean visitingDirectory) throws IOException {
 		super();
 		this.home = home;
 		jpegImages = home.resolve("JPEGImages");
@@ -90,12 +94,14 @@ public class DataSet {
 		// createDirectories(annotations);
 		// }
 
-		walkFileTree(jpegImages, new ImageFileVisitor());
-		Collections.sort(imageFiles);
-		walkFileTree(rawLabel, new RawLabelFileVisitor());
-		Collections.sort(rawLabelFiles);
-		walkFileTree(darkNetLabels, new LabelFileVisitor());
-		Collections.sort(darknetLabelFiles);
+		if (visitingDirectory ) {
+			walkFileTree(jpegImages, new ImageFileVisitor());
+			Collections.sort(imageFiles);
+			walkFileTree(rawLabel, new RawLabelFileVisitor());
+			Collections.sort(rawLabelFiles);
+			walkFileTree(darkNetLabels, new LabelFileVisitor());
+			Collections.sort(darknetLabelFiles);
+		}
 	}
 
 	public Path getRawLabel(String file) {
