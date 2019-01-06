@@ -1,3 +1,4 @@
+
 /**
  * 
  */
@@ -33,7 +34,7 @@ public class Util {
 				"jdbc:mysql://localhost:3306/corpus?useUnicode=yes&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true",
 				"root", "123456");
 		return conn;
-	}
-	
+	}	
 
 }
+

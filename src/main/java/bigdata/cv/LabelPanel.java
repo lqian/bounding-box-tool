@@ -11,6 +11,7 @@ import static javax.swing.JOptionPane.showConfirmDialog;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
@@ -124,6 +125,7 @@ public class LabelPanel extends JPanel implements Tool {
 		tblBoudingBox = new JTable(tableModel);
 		tblBoudingBox.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblBoudingBox.getColumnModel().getColumn(0).setPreferredWidth(5);
+		tblBoudingBox.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
 
 		JScrollPane scrollPane = new JScrollPane(tblBoudingBox);
 		GridBagConstraints gbcScrollPane = new GridBagConstraints();
@@ -244,6 +246,7 @@ public class LabelPanel extends JPanel implements Tool {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				if (tblBoudingBox.getRowCount() == 0) return ;
 				int index = tblBoudingBox.getSelectedRow();
 				imagePanel.removeBoundingBox(index);
 				monitorPanel.clearImage();
@@ -336,7 +339,7 @@ public class LabelPanel extends JPanel implements Tool {
 				String image = JOptionPane.showInputDialog("image file name:");
 				if (image != null) {
 					for (int i = 0; i < imageFiles.size(); i++) {
-						if (image.equals(imageFiles.get(i))) {
+						if ((imageFiles.get(i)).indexOf(image) != -1) {
 							currentImageIndex = i;
 							imagePanel.load(imageFiles.get(currentImageIndex));
 							lblFileName.setText(imageFiles.get(currentImageIndex));
