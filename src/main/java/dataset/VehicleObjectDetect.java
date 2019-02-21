@@ -3,6 +3,7 @@ package dataset;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,6 +11,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.imageio.ImageIO;
 
@@ -26,6 +33,13 @@ public class VehicleObjectDetect {
 	BufferedWriter valList;
 	BufferedWriter labels;
 	Map<String, String> types = new HashMap<>();
+	
+	CountDownLatch latch;
+	AtomicBoolean readover = new AtomicBoolean(false);
+	 
+	LinkedBlockingQueue<LineJson> sourceQueue = new LinkedBlockingQueue<>(2000);
+	LinkedBlockingQueue<String> listQueue = new LinkedBlockingQueue<>(2000); 
+	
 	public VehicleObjectDetect(Path meta, Path cfg) throws Exception {
 		super();
 		this.meta = meta;
@@ -41,57 +55,101 @@ public class VehicleObjectDetect {
 		mapper.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, true);
 		BufferedReader reader = Files.newBufferedReader(meta);
 		String line = null;
-		int c = 0;
-		while ((line = reader.readLine()) != null) {
-			LineJson json = mapper.readValue(line, LineJson.class);
-			Path samplePath = Paths.get(json.image);
-			List<ImageResult> results = json.seemooResult.imageResults;
-			if (Files.exists(samplePath) && results != null && results.size() > 0) {
-				BufferedImage image = ImageIO.read(samplePath.toFile());
-				float iw = image.getWidth();
-				float ih = image.getHeight();
-				Path p = Paths.get(json.image.replaceFirst("\\.jpg", ".txt").replaceFirst("JPEGImages", "labels") );
-				Path dir = p.getParent();
-				
-//				if (Files.notExists(dir)) {
-//					Files.createDirectories(dir);
-//				}
-				c++;
-				List<Vehicle> vehicles = results.get(0).vehicles;
-				if (vehicles !=null && vehicles.size() > 0) {
-					BufferedWriter label = Files.newBufferedWriter(p);
-					for (Vehicle v: vehicles) {
-						List<Integer> rect = v.detect.body.Rect;
-						Top top = v.recognize.type.topList.get(0);
-						// center of box relative to samples' width and height
-						float yx = ((2 * rect.get(0) + rect.get(2)) / 2 -1 ) / iw;  
-						float yy = ((2 * rect.get(1) + rect.get(3)) / 2 -1 ) / ih;
-						float yw = rect.get(2) / iw;
-						float yh = rect.get(3) / ih;
-						String outLine = String.format("%d %f %f %f %f", Integer.parseInt(top.code)-1, yx, yy, yw, yh);
-						label.write(outLine);
-						label.newLine();
+		int nprocs = Runtime.getRuntime().availableProcessors();
+		latch = new CountDownLatch(nprocs);
+		ExecutorService threadPool = Executors.newFixedThreadPool(nprocs);
+		for (int i=0; i<nprocs; i++) {
+			threadPool.execute(new Runnable() {
+				@Override
+				public void run() {
+					LineJson json = null;
+					try {
+						while (!readover.get() && ( json = sourceQueue.poll(500, TimeUnit.MILLISECONDS)) != null ) {
+							try {
+								Path samplePath = Paths.get(json.image);
+								List<ImageResult> results = json.seemooResult.imageResults;
+								if (Files.exists(samplePath) && results != null && results.size() > 0) {
+									BufferedImage image = ImageIO.read(samplePath.toFile());
+									float iw = image.getWidth();
+									float ih = image.getHeight();
+									Path p = Paths.get(json.image.replaceFirst("\\.jpg", ".txt").replaceFirst("JPEGImages", "labels") );
+									
+									List<Vehicle> vehicles = results.get(0).vehicles;
+									if (vehicles !=null && vehicles.size() > 0) {
+										Path dir = p.getParent(); 
+										if (Files.notExists(dir)) {
+											Files.createDirectories(dir);
+										}
+										BufferedWriter label = Files.newBufferedWriter(p);
+										for (Vehicle v: vehicles) {
+											List<Integer> rect = v.detect.body.Rect;
+											Top top = v.recognize.type.topList.get(0);
+											// center of box relative to samples' width and height
+											float yx = ((2 * rect.get(0) + rect.get(2)) / 2 -1 ) / iw;  
+											float yy = ((2 * rect.get(1) + rect.get(3)) / 2 -1 ) / ih;
+											float yw = rect.get(2) / iw;
+											float yh = rect.get(3) / ih;
+											String outLine = String.format("%d %f %f %f %f", Integer.parseInt(top.code)-1, yx, yy, yw, yh);
+											label.write(outLine);
+											label.newLine();
+										}
+										label.close();
+										listQueue.put(samplePath.toString());
+									}
+								}
+							}catch (IOException ioe) {
+								ioe.printStackTrace();
+							}
+						}
+						latch.countDown();
+					} catch (InterruptedException e) { 
+						e.printStackTrace();
 					}
-					label.close();
 				}
-				if (c % 1000 == 0) {
-					System.out.format("convert %d samples \n", c);
-				}
-				if (c % 10 == 0) {
-					valList.write(samplePath.toString());
-					valList.newLine();
-				}
-				else {
-					trainList.write(samplePath.toString());
-					trainList.newLine();
-				}
-			}
+			});
 		}
 		
+		// writer thread
+		new Thread() {
+			int c=0;
+			@Override
+			public void run() {
+				String line = null;
+				try {
+					while ((line = listQueue.poll(50, TimeUnit.MILLISECONDS)) != null || latch.getCount() > 0 ) {
+						if (line !=null) {
+							if (++c % 1000 == 0) {
+								System.out.format("convert %d samples \n", c);
+							}
+							if (c % 10 == 0) {
+								valList.write(line);
+								valList.newLine();
+							}
+							else {
+								trainList.write(line);
+								trainList.newLine();
+							}
+						}
+						else {
+							Thread.sleep(1000);
+						}
+					}
+					valList.close();
+					trainList.close();
+					System.out.format("convert %d train and %d valid samples \n",  c- c/10, c/10 );
+				} catch (InterruptedException | IOException e ) {
+					e.printStackTrace();
+				}
+			}
+		}.start();
+		
+		//read thread		
+		while ((line = reader.readLine()) != null) {
+			LineJson json = mapper.readValue(line, LineJson.class);
+			sourceQueue.put(json);  
+		}
 		reader.close();
-		valList.close();
-		trainList.close();
-		System.out.format("convert %d train and %d valid samples \n",  c- c/10, c/10 );
+		readover.set(true);
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -100,7 +158,6 @@ public class VehicleObjectDetect {
 		
 		VehicleObjectDetect vod = new VehicleObjectDetect(meta, cfg);
 		vod.execute();
-		
 	}
 	
 	public static class LineJson {

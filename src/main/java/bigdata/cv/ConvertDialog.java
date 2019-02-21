@@ -126,9 +126,8 @@ public class ConvertDialog extends JDialog implements ItemListener {
 				}
 				
 				if (onlyGenTrainAndValSet.isSelected()) {
-					List<String> list = dataSet.imageFiles;
 					try {
-						DatasetCensus rest = genTrainAndValSet(list, false);
+						DatasetCensus rest = genTrainAndValSet(dataSet.imageFiles, false);
 						lblStatus.setText(String.format(" generate train set count: %d, val set count: %d",
 								rest.trainCount, rest.valCount));
 					} catch (IOException e1) {
@@ -145,7 +144,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 							}
 						}
 
-						DatasetCensus rest = genTrainAndValSet(list, true);
+						DatasetCensus rest = genTrainAndValSet(dataSet.imageFiles, false);
 						genClassNameFile();
 						lblStatus.setText(String.format("convert labeles: %d, train set count: %d, val set count: %d",
 								counter, rest.trainCount, rest.valCount));
@@ -168,41 +167,32 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	}
 
 	/**
-	 * 1:2 ratio for train set and validate set
+	 * 1:6 ratio for train set and validate set
 	 * 
 	 * @param rawLabelFiles
 	 * @throws IOException
 	 */
-	DatasetCensus genTrainAndValSet(List<String> labelList, boolean fromLabel) throws IOException {
+	DatasetCensus genTrainAndValSet(List<String> imageList, boolean fromLabel) throws IOException {
 		DatasetCensus dc = new DatasetCensus();
 		int tc = 0, vc = 0;
-		Collections.shuffle(labelList);
+		Collections.shuffle(imageList);
 		Path trainSet = dataSet.resolve("train.txt");
 		Path valSet = dataSet.resolve("val.txt");
 		BufferedWriter trainWriter = Files.newBufferedWriter(trainSet);
 		BufferedWriter valWriter = Files.newBufferedWriter(valSet);
 
-		for (int i = 0; i < labelList.size(); i++) {
-			String labelFile = labelList.get(i);
-
-			if (convertLabel(labelFile) == 0)
-				continue;
-
-			Path imagePath = dataSet.getImage(labelFile.replace("." + suffix, ".jpg"));
-			if (Files.exists(imagePath)) {
-				// if (i % 3 == 0) {
+		for (int i = 0; i < imageList.size(); i++) {
+			String imageFile = imageList.get(i);
+			Path imagePath = dataSet.getImage(imageFile);
+			if (i % 6 == 0) {
+				valWriter.write(imagePath.toString());
+				valWriter.newLine();
+				vc++;
+			}
+			else {
 				trainWriter.write(imagePath.toString());
 				trainWriter.newLine();
 				tc++;
-				// }
-				// else {
-				if (i % 3 == 0) {
-					valWriter.write(imagePath.toString());
-					valWriter.newLine();
-					vc++;
-				}
-			} else {
-				System.out.println("not exists image: " + imagePath);
 			}
 		}
 
@@ -219,17 +209,17 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	 * 2 -1) / image width dy = (( 2y + h ) / 2 -1) / image height dw = w /
 	 * image width dy = h / image height
 	 * 
-	 * @param sn
+	 * @param rawLabel
 	 * @return
 	 * @throws IOException
 	 */
-	int convertLabel(String sn) throws IOException {
+	int convertLabel(String rawLabel) throws IOException {
 		int c = 0;
-		String tn = sn.replace(".label", ".txt");
+		String tn = rawLabel.replace(".label", ".txt");
 		Path txt = dataSet.getDarknetLabel(tn);
 
 		BufferedWriter writer = Files.newBufferedWriter(txt);
-		BufferedReader reader = Files.newBufferedReader(dataSet.getRawLabel(sn));
+		BufferedReader reader = Files.newBufferedReader(dataSet.getRawLabel(rawLabel));
 		String line = reader.readLine();
 		int width = 0, height = 0;
 		if (line != null) {
@@ -238,7 +228,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 				width = Integer.valueOf(tokens[0]);
 				height = Integer.valueOf(tokens[1]);
 			} else {
-				throw new RuntimeException("invalid width and height [" + line + "] in label:" + sn);
+				throw new RuntimeException("invalid width and height [" + line + "] in label:" + rawLabel);
 			}
 
 			while ((line = reader.readLine()) != null) {
