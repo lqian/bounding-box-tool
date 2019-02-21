@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LabelConfig {
@@ -32,6 +33,8 @@ public class LabelConfig {
 	String[] clazzNames;
 	Map<String, String> aliasMap = new HashMap<>();
 	Map<String, String> idsMap = new HashMap<>();
+	List<Integer> splits = new ArrayList<>();
+	 
 
 	public LabelConfig(Path path) throws IOException {
 		ArrayList<String> names = new ArrayList<>();
@@ -40,8 +43,16 @@ public class LabelConfig {
 			while ((line = reader.readLine()) != null) {
 				String tokens[] = line.split("=", 2);
 				if (tokens.length == 2) {
-					names.add(tokens[0]);
-					aliasMap.put(tokens[0], tokens[1]);
+					if (tokens[0].contentEquals("splits")) {
+						String[] ss =  tokens[1].split("[\\s,]");
+						for (String v:ss) {
+							splits.add(Integer.valueOf(v));    
+						}
+					}
+					else {
+						names.add(tokens[0]);
+						aliasMap.put(tokens[0], tokens[1]);
+					}
 				} else {
 					System.out.println("invalid class name: " + line);
 				}

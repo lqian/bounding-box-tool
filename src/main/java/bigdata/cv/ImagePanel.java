@@ -655,24 +655,59 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		
 		int idx = -1;
 		
+		int s = 0;
+		int e = 0;
+		int gline = 0;
+		GridBagConstraints gbc = new GridBagConstraints();
+		
 		public LabelNamesPanel() {
 			setLayout(new GridBagLayout());
-			GridBagConstraints gbc = new GridBagConstraints();
-			gbc.fill = GridBagConstraints.BOTH;
 			gbc.anchor = GridBagConstraints.WEST; 
+			gbc.fill = GridBagConstraints.BOTH;
 			gbc.gridwidth = 1;
+			 
+			splitGroup(); 
+		}
+		
+		void splitGroup() {
+			int i = 0;
+			int x = 0;
+			int y = 0;
 			
-			int l = labelConfig.clazzNames.length;
-			for (int i=0; i<l; i++) {
-				gbc.gridy = i / 4;
-				gbc.gridx = i % 4;
+			int length = labelConfig.clazzNames.length;
+			for (int split: labelConfig.splits) {
+				e = split;
+				for (; i < e && i<length; i++) {
+					x = (i - s) % 4;
+					y = gline + (i - s) / 4;
+					gbc.gridy = y ;
+					gbc.gridx = x ;
+					JRadioButton rb = new JRadioButton(labelConfig.clazzNames[i]);
+					rb.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 16));
+					rb.addActionListener(new LabelNamesListener(this, i));
+					add(rb, gbc);
+					group.add(rb);
+				}				 
+				s = e;
+				gline += y;
+				if (( e - s) % 4 < 3) gline++; //force new line for next group 
+			}
+			
+			//for rest
+			for (; i<length; i++) {
+				x = (i - s) % 4;
+				y = gline + (i - s) / 4;
+				gbc.gridy = y ;
+				gbc.gridx = x ;
 				JRadioButton rb = new JRadioButton(labelConfig.clazzNames[i]);
 				rb.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 16));
 				rb.addActionListener(new LabelNamesListener(this, i));
 				add(rb, gbc);
 				group.add(rb);
-			}
+			}		
 		}
+
+		 
 		
 		String selected() { return labelConfig.clazzNames[idx]; }
 	}

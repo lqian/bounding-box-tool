@@ -608,6 +608,7 @@ public class LabelPanel extends JPanel implements Tool {
 	}
 
 	private void showCurrImage() {
+		if (imageFiles.size() == 0) return ;
 		if (currentImageIndex >= imageFiles.size())
 			currentImageIndex = 0;
 		monitorPanel.clearImage();
