@@ -226,7 +226,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 		queue = new LinkedBlockingQueue<>();
 		queue.addAll(source.rawLabelFiles);
 		int threadNum = Integer.parseInt(threadNumTextField.getText());
-		CountDownLatch latch = new CountDownLatch(threadNum);
+		latch = new CountDownLatch(threadNum);
 		
 		ExecutorService service = Executors.newFixedThreadPool(threadNum);
 		for (int i=0; i< threadNum; i++) {
@@ -240,8 +240,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 				try {
 					while (!queue.isEmpty()) {
 						Thread.sleep(5000);
-						lblStatus.setText("corp samples" + counter.get());
-						lblStatus.updateUI();
+						lblStatus.setText("corp samples" + counter.get());						
 					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
@@ -254,7 +253,6 @@ public class CorpDialog extends JDialog implements ItemListener {
 			latch.await();
 			service.shutdown();
 			lblStatus.setText("corp samples" + counter.get());
-			lblStatus.updateUI();
 			corpBtn.setEnabled(true);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
