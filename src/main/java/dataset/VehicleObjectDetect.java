@@ -50,6 +50,11 @@ public class VehicleObjectDetect {
 		labels = Files.newBufferedWriter(cfg.resolve("labels"));
 	} 
 	
+	int mapColorId(Top color) {
+		int o = Integer.parseInt(color.code) - 1;
+		return o + 21;
+	}
+	
 	void execute() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, true);
@@ -69,7 +74,7 @@ public class VehicleObjectDetect {
 								Path samplePath = Paths.get(json.image);
 								List<ImageResult> results = json.seemooResult.imageResults;
 								if (Files.exists(samplePath) && results != null && results.size() > 0) {
-									BufferedImage image = ImageIO.read(samplePath.toFile());
+									BufferedImage image = ImageIO.read(samplePath.toFile());									
 									float iw = image.getWidth();
 									float ih = image.getHeight();
 									Path p = Paths.get(json.image.replaceFirst("\\.jpg", ".txt").replaceFirst("JPEGImages", "labels") );
@@ -84,6 +89,7 @@ public class VehicleObjectDetect {
 										for (Vehicle v: vehicles) {
 											List<Integer> rect = v.detect.body.Rect;
 											Top top = v.recognize.type.topList.get(0);
+											Top color = v.recognize.color.topList.get(0);
 											// center of box relative to samples' width and height
 											float yx = ((2 * rect.get(0) + rect.get(2)) / 2 -1 ) / iw;  
 											float yy = ((2 * rect.get(1) + rect.get(3)) / 2 -1 ) / ih;
@@ -91,6 +97,9 @@ public class VehicleObjectDetect {
 											float yh = rect.get(3) / ih;
 											String outLine = String.format("%d %f %f %f %f", Integer.parseInt(top.code)-1, yx, yy, yw, yh);
 											label.write(outLine);
+											label.newLine();
+											String colorLine = String.format("%d %f %f %f %f", mapColorId(color), yx, yy, yw, yh);
+											label.write(colorLine);
 											label.newLine();
 										}
 										label.close();
@@ -154,7 +163,8 @@ public class VehicleObjectDetect {
 
 	public static void main(String[] args) throws Exception {
 		Path meta = Paths.get(args[0]);
-		Path cfg = Paths.get(".");
+		Path cfg = args.length == 1 ? Paths.get(".") : Paths.get(args[1]);
+		if (Files.notExists(cfg)) Files.createDirectories(cfg);
 		
 		VehicleObjectDetect vod = new VehicleObjectDetect(meta, cfg);
 		vod.execute();

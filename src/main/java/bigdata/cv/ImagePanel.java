@@ -214,6 +214,9 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 		if (i != -1) {
 			try {
 				Path path = dataSet.getRawLabel(rawLabelFile);
+				Path subDir = path.getParent();
+				if (Files.notExists(subDir)) 
+					Files.createDirectories(subDir);
 				boolean update = Files.exists(path);
 				BufferedWriter writer = Files.newBufferedWriter(path, Charset.defaultCharset());
 				writer.write(this.imageWidth + "," + this.imageHeight);
