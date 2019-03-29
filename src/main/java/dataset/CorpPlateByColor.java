@@ -1,9 +1,7 @@
-/**
- * 
- */
 package dataset;
 
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,7 +12,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -26,17 +26,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
-/**
- * @author link
- *
- */
-public class CorpPlate {
+public class CorpPlateByColor {
 
-	Path target;
+	Path dataroot;
 
 	Connection conn;
 
-	List<String> provinces;
+	List<String> colors;
+	
+	Map<String, Integer> labelMap = new HashMap<>();
 
 	PreparedStatement pstm;
 
@@ -54,26 +52,32 @@ public class CorpPlate {
 
 	AtomicInteger counter;
 
-	public CorpPlate(Path target, Connection conn, int startSeq) throws SQLException {
+	public CorpPlateByColor(Path target, Connection conn, int startSeq, Path label) throws SQLException, IOException {
 		super();
-		this.target = target;
+		this.dataroot = target;
 		this.conn = conn;
 		counter = new AtomicInteger(0);
+		
+		BufferedReader reader = Files.newBufferedReader(label);
+		String key;
+		int id =0;
+		while ((key = reader.readLine())!=null) {
+			labelMap.put(key, id++);
+		}
+		System.out.println("put " + id + " keys");
 		
 //		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
 //				+ " where substring(plate_nbr, 1,1) =? and plate_color=1 limit 100" );
 		
 		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
-				+ " where substring(plate_nbr, 1,1) =? and plate_color=0 and instr(plate_nbr, '警')>1 limit 200" );
+				+ " where  plate_color=?  limit 3000000");
 		
 		
 	// 普通黑牌
 //		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
 //				+ "where plate_color=3 and instr(plate_nbr, '粤') = 1 and substring(plate_nbr, 1,1) =? limit 2000");
 
-		provinces = Arrays.asList("京", "津", "冀", "晋", "蒙", "辽", "吉", "黑", "沪", "苏", "浙", "皖",
-				"闽", "赣", "鲁", "豫", "鄂", "湘", "粤", "桂", "琼", "渝", "川",
-				"贵", "云", "藏", "陕", "甘", "青", "宁", "新", "使");
+		colors = Arrays.asList("0", "1", "2", "3", "4", "5", "6");
 	}
 
 	public void doDataset() throws Exception {
@@ -92,7 +96,7 @@ public class CorpPlate {
 		latch = new CountDownLatch(workerNum);
 		service.execute(new MetaWriter());
 		for (int i=0; i<workerNum; i++) service.execute(new Worker());
-		for (int i=0; i<provinces.size(); i++) {
+		for (int i=0; i<colors.size(); i++) {
 			provinceCatalog(i);
 		}
 		 
@@ -103,11 +107,11 @@ public class CorpPlate {
 	}
 
 	public void provinceCatalog(int id) throws Exception {
-		Path catalog = target.resolve(String.format("%02d", id));
+		Path catalog = dataroot.resolve(String.format("%02d", id));
 		if (Files.notExists(catalog)) {
 			Files.createDirectories(catalog);
 		}
-		String province = provinces.get(id);
+		String province = colors.get(id);
 		pstm.setString(1, province);
 		ResultSet rs = pstm.executeQuery();
 		int c = 0;
@@ -118,14 +122,9 @@ public class CorpPlate {
 			pd.plateBox = Box.parse(rs.getString("plate_position"));
 			pd.vehicleBox = Box.parse(rs.getString("vehicle_position"));
 			pd.plateNbr = rs.getString("plate_nbr");
-
 			queue.put(pd);
-			if (++c % 1000 == 0) {
-				System.out.format("put %d samples for %s catalog \n" , c, province);
-			}
 		}
 		rs.close();
-		System.out.format("put %d samples for %s catalog \n" , c, province);
 	}
 
 
@@ -176,10 +175,15 @@ public class CorpPlate {
 							BufferedImage img = ImageIO.read(source.toFile());
 							if (img == null || img.getHeight() == 0 || img.getWidth() == 0) continue;
 							BufferedImage plateImg = augmentPlate(img, vehicleBox, plateBox);
-							if (plateImg != null) {								
-								pd.target = Paths.get(String.format("%s_%09d.jpg", pd.catalog, counter.incrementAndGet()));
+							if (plateImg != null) {
+								int seq = counter.incrementAndGet();
+								int sub = seq / 10000;
+								int no = seq % 10000;								 
+								pd.target = Paths.get(String.format("%s/%06d/%06d.jpg", pd.catalog, sub, no));
+								Path dir = pd.target.getParent();
+								if (Files.notExists(dir)) Files.createDirectories(dir);
 								ImageIO.write(plateImg, "JPG", pd.target.toFile()); 
-								completedQueue.add(pd);
+								completedQueue.put(pd);
 							}
 						}
 					}
@@ -191,19 +195,33 @@ public class CorpPlate {
 		}
 	}
 
+	
 	class MetaWriter implements Runnable {
+		
+		String convertAsLabel(String plateNbr) {
+			StringBuilder label = new StringBuilder();
+			int len = plateNbr.length();
+			for (int i=0; i<len && i < 8; i++) {
+				label.append(labelMap.get(plateNbr.substring(i, i+1)) + " ");	
+			}
+			for (int i=0; i<8-len; i++) label.append("0 ");
+			return label.toString();
+		}
 		@Override
 		public void run() {
 			int c = 0;
-			try (BufferedWriter meta = Files.newBufferedWriter(Paths.get("meta"))){
+			try (BufferedWriter meta = Files.newBufferedWriter(Paths.get("meta.list"))){
 				while(latch.getCount() > 0) {
 					PlateData pd = null;
 					try {
 						while ((pd = completedQueue.poll(100, TimeUnit.MICROSECONDS))!= null) {
-							int nc = pd.target.getNameCount();  
-							meta.write(pd.target.subpath(nc-1, nc).toString() + " " + pd.plateNbr);
+							meta.write(dataroot.relativize(pd.target).toString() + " " + convertAsLabel(pd.plateNbr));
 							meta.newLine();
 							c++;
+							
+							if (c % 1000 == 0) {
+								System.out.format("write %d samples for catalog \n" , c);
+							}
 						}
 					}
 					catch (Exception e) {
@@ -225,7 +243,9 @@ public class CorpPlate {
 	public static void main(String[] args) throws Exception {
 		Path target = Paths.get(args[0]);
 		Connection cnn = Util.createConn();
-		new CorpPlate(target, cnn, Integer.valueOf(args[1])).doDataset();
+		Path label = Paths.get(args[2]);
+		new CorpPlateByColor(target, cnn, Integer.valueOf(args[1]), label).doDataset();
 		cnn.close();
 	}
+
 }
