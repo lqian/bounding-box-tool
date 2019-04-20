@@ -52,6 +52,8 @@ public class DataSet {
 	static {
 		extensions.add("jpg");
 		extensions.add("png");
+		extensions.add("jpeg");
+		extensions.add("gif");
 	}
 
 	Path home;
