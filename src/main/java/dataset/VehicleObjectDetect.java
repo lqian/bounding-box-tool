@@ -50,10 +50,9 @@ public class VehicleObjectDetect {
 		labels = Files.newBufferedWriter(cfg.resolve("labels"));
 	} 
 	
-	
 	int mapColorId(Top color) {
 		int o = Integer.parseInt(color.code) - 1;
-		return o + 20;
+		return o + 21;
 	}
 	
 	void execute() throws Exception {
@@ -75,7 +74,7 @@ public class VehicleObjectDetect {
 								Path samplePath = Paths.get(json.image);
 								List<ImageResult> results = json.seemooResult.imageResults;
 								if (Files.exists(samplePath) && results != null && results.size() > 0) {
-									BufferedImage image = ImageIO.read(samplePath.toFile());
+									BufferedImage image = ImageIO.read(samplePath.toFile());									
 									float iw = image.getWidth();
 									float ih = image.getHeight();
 									Path p = Paths.get(json.image.replaceFirst("\\.jpg", ".txt").replaceFirst("JPEGImages", "labels") );
@@ -89,17 +88,19 @@ public class VehicleObjectDetect {
 										BufferedWriter label = Files.newBufferedWriter(p);
 										for (Vehicle v: vehicles) {
 											List<Integer> rect = v.detect.body.Rect;
-											//TODO need to map class ID
-											Top type = v.recognize.type.topList.get(0);
+//											Top top = v.recognize.type.topList.get(0);
 											Top color = v.recognize.color.topList.get(0);
 											// center of box relative to samples' width and height
 											float yx = ((2 * rect.get(0) + rect.get(2)) / 2 -1 ) / iw;  
 											float yy = ((2 * rect.get(1) + rect.get(3)) / 2 -1 ) / ih;
 											float yw = rect.get(2) / iw;
 											float yh = rect.get(3) / ih;
-											String typeLine = String.format("%d %f %f %f %f", Integer.parseInt(type.code)-1, yx, yy, yw, yh);
-											label.write(typeLine);
-											label.newLine();
+//											String typeLine = String.format("%d %f %f %f %f", Integer.parseInt(type.code)-1, yx, yy, yw, yh);
+//											label.write(typeLine);
+//											label.newLine();
+//											String colorLine = String.format("%d %f %f %f %f", mapColorId(color), yx, yy, yw, yh);
+//											label.write(colorLine);
+//											label.newLine();
 											String colorLine = String.format("%d %f %f %f %f", mapColorId(color), yx, yy, yw, yh);
 											label.write(colorLine);
 											label.newLine();
@@ -167,7 +168,8 @@ public class VehicleObjectDetect {
 
 	public static void main(String[] args) throws Exception {
 		Path meta = Paths.get(args[0]);
-		Path cfg = Paths.get(".");
+		Path cfg = args.length == 1 ? Paths.get(".") : Paths.get(args[1]);
+		if (Files.notExists(cfg)) Files.createDirectories(cfg);
 		
 		VehicleObjectDetect vod = new VehicleObjectDetect(meta, cfg);
 		vod.execute();

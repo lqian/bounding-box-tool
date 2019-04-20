@@ -135,15 +135,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 					}
 				} else {
 					try {
-						int counter = 0;
-						List<String> list = dataSet.rawLabelFiles;
-						for (String file : list) {
-							counter += convertLabel(file);
-							if (counter % 1000 == 0) {
-								lblStatus.setText(counter + "");
-							}
-						}
-
+						int counter = convertLabels();
 						DatasetCensus rest = genTrainAndValSet(dataSet.imageFiles, false);
 						genClassNameFile();
 						lblStatus.setText(String.format("convert labeles: %d, train set count: %d, val set count: %d",
@@ -152,6 +144,19 @@ public class ConvertDialog extends JDialog implements ItemListener {
 						e1.printStackTrace();
 					}
 				}
+			}
+
+			int convertLabels() throws IOException {
+				int counter = 0;
+				List<String> list = dataSet.imageFiles;
+				for (String img : list) {
+					String labelFile = img.replaceAll("\\.jpg", ".label");
+					counter += convertLabel(labelFile);
+					if (counter % 1000 == 0) {
+						lblStatus.setText(counter + "");
+					}
+				}
+				return counter;
 			}
 		});
 	}
@@ -219,6 +224,10 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		Path txt = dataSet.getDarknetLabel(tn);
 
 		BufferedWriter writer = Files.newBufferedWriter(txt);
+		if (Files.notExists(dataSet.getRawLabel(rawLabel))) {  // empty txt file
+			writer.close();
+			return c;
+		}
 		BufferedReader reader = Files.newBufferedReader(dataSet.getRawLabel(rawLabel));
 		String line = reader.readLine();
 		int width = 0, height = 0;

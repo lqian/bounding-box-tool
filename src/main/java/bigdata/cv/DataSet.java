@@ -183,7 +183,7 @@ public class DataSet {
 				if (li > 0) {
 					String extName = name.substring(li + 1).toLowerCase();
 					if (extensions.contains(extName)) {
-						imageFiles.add(name);
+						imageFiles.add(jpegImages.relativize(file).toString());
 					}
 				}
 			}
