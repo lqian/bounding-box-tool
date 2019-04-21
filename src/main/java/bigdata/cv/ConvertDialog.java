@@ -81,6 +81,10 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	List<JCheckBox> clazzes = new ArrayList<>();
 	
 	Set<String> selectedClazz = new HashSet<>();
+
+	private JRadioButton rbDarknet;
+
+	private JRadioButton rbSSD;
 	
 	public ConvertDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
 		super(owner, "convert label", modal);
@@ -151,7 +155,12 @@ public class ConvertDialog extends JDialog implements ItemListener {
 				List<String> list = dataSet.imageFiles;
 				for (String img : list) {
 					String labelFile = img.replaceAll("\\.jpg", ".label");
-					counter += convertLabel(labelFile);
+					if (rbDarknet.isSelected()) { 
+						counter += raw2Darknet(labelFile);
+					}
+					else if (rbSSD.isSelected()) {
+						counter += raw2SSD(labelFile);
+					}
 					if (counter % 1000 == 0) {
 						lblStatus.setText(counter + "");
 					}
@@ -208,6 +217,58 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		return dc;
 	}
 
+	/**
+	 * boundbox(x, y, w, h) -> SSD_boundbox(minx, miny, maxx, maxy) 
+	 * minx = x/iw, miny=y/ih, maxx = (x+w) / iw,  maxy=(x+h)/ih 
+	 * 
+	 * @param rawLabel
+	 * @return
+	 * @throws IOException
+	 */
+	int raw2SSD(String rawLabel) throws IOException {
+		int c = 0;
+		String tn = rawLabel.replace(".label", ".txt");
+		Path txt = dataSet.getSSDLabel(tn);
+
+		BufferedWriter writer = Files.newBufferedWriter(txt);
+		if (Files.notExists(dataSet.getRawLabel(rawLabel))) {  // empty txt file
+			writer.close();
+			return c;
+		}
+		BufferedReader reader = Files.newBufferedReader(dataSet.getRawLabel(rawLabel));
+		String line = reader.readLine();
+		int width = 0, height = 0;
+		if (line != null) {
+			String tokens[] = line.split(",", 2);
+			if (tokens.length == 2) {
+				width = Integer.valueOf(tokens[0]);
+				height = Integer.valueOf(tokens[1]);
+			} else {
+				throw new RuntimeException("invalid width and height [" + line + "] in label:" + rawLabel);
+			}
+
+			while ((line = reader.readLine()) != null) {
+				LabeledBoundingBox bb = LabeledBoundingBox.from(line);
+				if (bb != null) {
+					double dw = 1.0 / width;
+					double dh = 1.0 / height;
+					double minx = bb.x * dw;
+					double miny = bb.y * dh;
+					double maxx = bb.w * dw + minx;
+					double maxy = bb.h * dh + miny;
+					if (selectedClazz.contains(bb.labelName)) {
+						//SSD use background with 0
+						writer.write(String.format("%s %f %f %f %f", labelConfig.getId(bb.labelName) + 1, minx, miny, maxx, maxy));
+						writer.newLine();
+						c++;
+					}
+				}
+			}
+			reader.close();
+		}
+		writer.close();
+		return c;
+	}
 
 	/**
 	 * boundbox(x, y, w, h) -> darknet_boundbox(dx, dy, dw, dh) dx = ((2x + w) /
@@ -218,7 +279,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	 * @return
 	 * @throws IOException
 	 */
-	int convertLabel(String rawLabel) throws IOException {
+	int raw2Darknet(String rawLabel) throws IOException {
 		int c = 0;
 		String tn = rawLabel.replace(".label", ".txt");
 		Path txt = dataSet.getDarknetLabel(tn);
@@ -296,32 +357,32 @@ public class ConvertDialog extends JDialog implements ItemListener {
 			clazzes.add(cb);
 		}
 		
-		JRadioButton radion1 = new JRadioButton("lbl");
-		JRadioButton radion2 = new JRadioButton("txt");
-		JRadioButton radion3 = new JRadioButton("label");
-		radion1.addItemListener(this);
-		radion2.addItemListener(this);
-		radion3.addItemListener(this);
-		radion3.setSelected(true);
-		group.add(radion1);
-		group.add(radion2);
-		group.add(radion3);
+		rbDarknet = new JRadioButton("darknet detection");
+		rbSSD = new JRadioButton("ssd detection");
+//		JRadioButton radion3 = new JRadioButton("label");
+		rbDarknet.addItemListener(this);
+		rbSSD.addItemListener(this);
+//		radion3.addItemListener(this);
+//		radion3.setSelected(true);
+		group.add(rbDarknet);
+		group.add(rbSSD);
+//		group.add(radion3);
 		
 		gbc.gridx = 0;
 		gbc.gridy = 3;
 		gbc.gridwidth = 6;
-		pane.add(new JLabel("Label File Extension Name:"), gbc);
+		pane.add(new JLabel("target label format Name:"), gbc);
 		
 		gbc.gridx = 6;
 		gbc.gridy = 3;
 		gbc.gridwidth = 1;
-		pane.add(radion1, gbc);
+		pane.add(rbDarknet, gbc);
 
 		gbc.gridx = 7;
-		pane.add(radion2, gbc);
+		pane.add(rbSSD, gbc);
 
-		gbc.gridx = 8;
-		pane.add(radion3, gbc);
+//		gbc.gridx = 8;
+//		pane.add(radion3, gbc);
 
 		
 		onlyGenTrainAndValSet = new JCheckBox("only generate Train and Validate Set");
