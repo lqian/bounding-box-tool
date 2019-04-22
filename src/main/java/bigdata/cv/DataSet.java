@@ -64,7 +64,7 @@ public class DataSet {
 
 	Path darkNetLabels; // darknet style
 	
-	Path ssdLabels; // SSD style
+	Path caffeMobileYolo; // SSD style
 
 	// Path annotations; // faster rcnn styl
 
@@ -94,9 +94,9 @@ public class DataSet {
 			createDirectories(darkNetLabels);
 		}
 		
-		ssdLabels = home.resolve("ssdLabels");
-		if (notExists(ssdLabels)) {
-			createDirectories(ssdLabels);
+		caffeMobileYolo = home.resolve("mobileYolo");
+		if (notExists(caffeMobileYolo)) {
+			createDirectories(caffeMobileYolo);
 		}
 		// annotations = home.resolve("Annotations");
 		// if (notExists(annotations)) {
@@ -162,8 +162,8 @@ public class DataSet {
 		return darkNetLabels.resolve(file);
 	}
 	
-	public Path getSSDLabel(String file) {
-		return this.ssdLabels.resolve(file);
+	public Path getCaffeMobileYolo(String file) {
+		return this.caffeMobileYolo.resolve(file);
 	}
 
 	public Path resolve(String file) {
