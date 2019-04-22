@@ -53,6 +53,7 @@ public class DataSet {
 		extensions.add("jpg");
 		extensions.add("png");
 		extensions.add("jpeg");
+		extensions.add("gif");
 	}
 
 	Path home;
@@ -62,6 +63,8 @@ public class DataSet {
 	Path rawLabel;
 
 	Path darkNetLabels; // darknet style
+	
+	Path ssdLabels; // SSD style
 
 	// Path annotations; // faster rcnn styl
 
@@ -89,6 +92,11 @@ public class DataSet {
 		darkNetLabels = home.resolve("labels");
 		if (notExists(darkNetLabels)) {
 			createDirectories(darkNetLabels);
+		}
+		
+		ssdLabels = home.resolve("ssdLabels");
+		if (notExists(ssdLabels)) {
+			createDirectories(ssdLabels);
 		}
 		// annotations = home.resolve("Annotations");
 		// if (notExists(annotations)) {
@@ -152,6 +160,10 @@ public class DataSet {
 
 	public Path getDarknetLabel(String file) {
 		return darkNetLabels.resolve(file);
+	}
+	
+	public Path getSSDLabel(String file) {
+		return this.ssdLabels.resolve(file);
 	}
 
 	public Path resolve(String file) {

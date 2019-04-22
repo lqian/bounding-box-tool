@@ -88,16 +88,19 @@ public class VehicleObjectDetect {
 										BufferedWriter label = Files.newBufferedWriter(p);
 										for (Vehicle v: vehicles) {
 											List<Integer> rect = v.detect.body.Rect;
-											Top top = v.recognize.type.topList.get(0);
+//											Top top = v.recognize.type.topList.get(0);
 											Top color = v.recognize.color.topList.get(0);
 											// center of box relative to samples' width and height
 											float yx = ((2 * rect.get(0) + rect.get(2)) / 2 -1 ) / iw;  
 											float yy = ((2 * rect.get(1) + rect.get(3)) / 2 -1 ) / ih;
 											float yw = rect.get(2) / iw;
 											float yh = rect.get(3) / ih;
-											String outLine = String.format("%d %f %f %f %f", Integer.parseInt(top.code)-1, yx, yy, yw, yh);
-											label.write(outLine);
-											label.newLine();
+//											String typeLine = String.format("%d %f %f %f %f", Integer.parseInt(type.code)-1, yx, yy, yw, yh);
+//											label.write(typeLine);
+//											label.newLine();
+//											String colorLine = String.format("%d %f %f %f %f", mapColorId(color), yx, yy, yw, yh);
+//											label.write(colorLine);
+//											label.newLine();
 											String colorLine = String.format("%d %f %f %f %f", mapColorId(color), yx, yy, yw, yh);
 											label.write(colorLine);
 											label.newLine();
@@ -117,6 +120,8 @@ public class VehicleObjectDetect {
 				}
 			});
 		}
+		
+		
 		
 		// writer thread
 		new Thread() {

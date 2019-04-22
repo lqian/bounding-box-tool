@@ -55,8 +55,7 @@ public class CorpPlate {
 	LinkedBlockingQueue<PlateData> completedQueue = new LinkedBlockingQueue<>(5000);
 
 	AtomicInteger counter = new AtomicInteger(0);;
-
-	public CorpPlate(Path target, Connection conn, String metaName) throws SQLException {
+	public CorpPlate(Path target, Connection conn, int startSeq) throws SQLException {
 		super();
 		this.target = target;
 		this.conn = conn;
@@ -73,9 +72,20 @@ public class CorpPlate {
 //		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
 //				+ "where plate_color=3 and instr(plate_nbr, '粤') = 1 and substring(plate_nbr, 1,1) =? limit 2000");
 
+		counter = new AtomicInteger(0);
+		
+//		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
+//				+ " where substring(plate_nbr, 1,1) =? and plate_color=1 limit 100" );
+		
 		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
 		+ "where plate_color=0 and substring(plate_nbr, 3,1) =? and plate_width/plate_height < 3 limit 2000");
+//				+ " where substring(plate_nbr, 1,1) =? and plate_color=0 and instr(plate_nbr, '警')>1 limit 200" );
 		
+		
+	// 普通黑牌
+//		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
+//				+ "where plate_color=3 and instr(plate_nbr, '粤') = 1 and substring(plate_nbr, 1,1) =? limit 2000");
+
 		provinces = Arrays.asList("京", "津", "冀", "晋", "蒙", "辽", "吉", "黑", "沪", "苏", "浙", "皖",
 				"闽", "赣", "鲁", "豫", "鄂", "湘", "粤", "桂", "琼", "渝", "川",
 				"贵", "云", "藏", "陕", "甘", "青", "宁", "新", "使");
@@ -239,7 +249,7 @@ public class CorpPlate {
 		Path target = Paths.get(args[0]);
 		if (Files.notExists(target)) Files.createDirectories(target);
 		Connection cnn = Util.createConn();
-		new CorpPlate(target, cnn, args[1]).doDataset();
+		new CorpPlate(target, cnn, Integer.valueOf(args[1])).doDataset();
 		cnn.close();
 	}
 }
