@@ -84,7 +84,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 
 	private JRadioButton rbDarknet;
 
-	private JRadioButton rbSSD;
+	private JRadioButton rbCaffeMobileYolo;
 	
 	public ConvertDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
 		super(owner, "convert label", modal);
@@ -158,8 +158,8 @@ public class ConvertDialog extends JDialog implements ItemListener {
 					if (rbDarknet.isSelected()) { 
 						counter += raw2Darknet(labelFile);
 					}
-					else if (rbSSD.isSelected()) {
-						counter += raw2SSD(labelFile);
+					else if (rbCaffeMobileYolo.isSelected()) {
+						counter += raw2CaffeMobileYolo(labelFile);
 					}
 					if (counter % 1000 == 0) {
 						lblStatus.setText(counter + "");
@@ -218,17 +218,18 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	}
 
 	/**
-	 * boundbox(x, y, w, h) -> SSD_boundbox(minx, miny, maxx, maxy) 
-	 * minx = x/iw, miny=y/ih, maxx = (x+w) / iw,  maxy=(x+h)/ih 
+	 * boundbox(name, x, y, w, h) -> caffe_mobile_yolo_boundbox(alias, minx, miny, maxx, maxy) 
+	 * minx = x, miny=y, maxx = (x+w) ,  maxy=(x+h)
+	 * 
 	 * 
 	 * @param rawLabel
 	 * @return
 	 * @throws IOException
 	 */
-	int raw2SSD(String rawLabel) throws IOException {
+	int raw2CaffeMobileYolo(String rawLabel) throws IOException {
 		int c = 0;
 		String tn = rawLabel.replace(".label", ".txt");
-		Path txt = dataSet.getSSDLabel(tn);
+		Path txt = dataSet.getCaffeMobileYolo(tn);
 
 		BufferedWriter writer = Files.newBufferedWriter(txt);
 		if (Files.notExists(dataSet.getRawLabel(rawLabel))) {  // empty txt file
@@ -250,15 +251,14 @@ public class ConvertDialog extends JDialog implements ItemListener {
 			while ((line = reader.readLine()) != null) {
 				LabeledBoundingBox bb = LabeledBoundingBox.from(line);
 				if (bb != null) {
-					double dw = 1.0 / width;
-					double dh = 1.0 / height;
-					double minx = bb.x * dw;
-					double miny = bb.y * dh;
-					double maxx = bb.w * dw + minx;
-					double maxy = bb.h * dh + miny;
+					double minx = bb.x;
+					double miny = bb.y;
+					double maxx = bb.w  + minx;
+					double maxy = bb.h  + miny;
 					if (selectedClazz.contains(bb.labelName)) {
-						//SSD use background with 0
-						writer.write(String.format("%s %f %f %f %f", labelConfig.getId(bb.labelName) + 1, minx, miny, maxx, maxy));
+						writer.write(String.format("%s %f %f %f %f", 
+								labelConfig.getAliases(bb.labelName), 
+								minx, miny, maxx, maxy));
 						writer.newLine();
 						c++;
 					}
@@ -357,15 +357,15 @@ public class ConvertDialog extends JDialog implements ItemListener {
 			clazzes.add(cb);
 		}
 		
-		rbDarknet = new JRadioButton("darknet detection");
-		rbSSD = new JRadioButton("ssd detection");
+		rbDarknet = new JRadioButton("Darknet");
+		rbCaffeMobileYolo = new JRadioButton("Caffe Mobile YOLO");
 //		JRadioButton radion3 = new JRadioButton("label");
 		rbDarknet.addItemListener(this);
-		rbSSD.addItemListener(this);
+		rbCaffeMobileYolo.addItemListener(this);
 //		radion3.addItemListener(this);
 //		radion3.setSelected(true);
 		group.add(rbDarknet);
-		group.add(rbSSD);
+		group.add(rbCaffeMobileYolo);
 //		group.add(radion3);
 		
 		gbc.gridx = 0;
@@ -379,7 +379,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 		pane.add(rbDarknet, gbc);
 
 		gbc.gridx = 7;
-		pane.add(rbSSD, gbc);
+		pane.add(rbCaffeMobileYolo, gbc);
 
 //		gbc.gridx = 8;
 //		pane.add(radion3, gbc);
