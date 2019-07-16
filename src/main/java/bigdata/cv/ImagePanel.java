@@ -334,7 +334,7 @@ public class ImagePanel extends JPanel implements KeyListener, MouseListener, Mo
 					int ih = image.getHeight();
 					if (bb.x + bb.w < iw && bb.y + bb.h < ih) {
 						BufferedImage sub = image.getSubimage(bb.x, bb.y, bb.w, bb.h);
-						this.listener.postSelectedImage(sub);
+						this.listener.postSelectedImage(sub, bb);
 					}
 				}
 

@@ -19,7 +19,8 @@
  */
 package bigdata.cv;
 
-import static java.lang.Math.*;
+import static java.lang.Math.abs;
+import static java.lang.Math.floor;
 
 /**
  * 
@@ -30,6 +31,8 @@ public class LabeledBoundingBox {
 
 	public int x, y;
 	public int w, h;
+	
+	public String  extras = "" ;
 
 	public String labelName; // label name of bounding box,
 
@@ -37,35 +40,54 @@ public class LabeledBoundingBox {
 			int showX, int showY) {
 		LabeledBoundingBox bb = new LabeledBoundingBox();
 		bb.labelName = labelName;
-		bb.x = (int) floor(((x1 < x2 ? x1 : x2) - showX + 1) * scaleFactor);
-		bb.y = (int) floor(((y1 < y2 ? y1 : y2) - showY + 1) * scaleFactor);
-		bb.w = (int) floor(abs(x1 - x2) * scaleFactor) + 1;
-		bb.h = (int) floor(abs(y1 - y2) * scaleFactor) + 1;
+		bb.x = (int) floor(((x1 < x2 ? x1 : x2) - showX) * scaleFactor);
+		bb.y = (int) floor(((y1 < y2 ? y1 : y2) - showY) * scaleFactor);
+		bb.w = (int) floor(abs(x1 - x2) * scaleFactor) ;
+		bb.h = (int) floor(abs(y1 - y2) * scaleFactor);
 		return bb;
 	}
+	
+	public static LabeledBoundingBox wrap(String labelName, int x1, int y1, int x2, int y2, double scaleFactor,
+			int showX, int showY, String extras) {
+		LabeledBoundingBox bb = new LabeledBoundingBox();
+		bb.labelName = labelName;
+		bb.x = (int) floor(((x1 < x2 ? x1 : x2) - showX) * scaleFactor);
+		bb.y = (int) floor(((y1 < y2 ? y1 : y2) - showY) * scaleFactor);
+		bb.w = (int) floor(abs(x1 - x2) * scaleFactor);
+		bb.h = (int) floor(abs(y1 - y2) * scaleFactor);
+		bb.extras = extras;
+		return bb;
+	}
+	
 
 	@Override
 	public String toString() {
-		return String.format("%s,%d,%d,%d,%d", labelName, x, y, w, h);
+		if (extras == null || extras.equals("")) {
+			return String.format("%s,%d,%d,%d,%d", labelName, x, y, w, h);
+		}
+		else {
+			return String.format("%s,%d,%d,%d,%d,%s", labelName, x, y, w, h, extras);
+		}
 	}
 
 	public String boundingBoxString() {
 		return String.format("%d,%d,%d,%d", x, y, w, h);
-	}
+	} 
 
 	public static LabeledBoundingBox from(String line) {
-		String[] tokens = line.split(",", 5);
-		if (tokens.length == 5) {
-			LabeledBoundingBox bb = new LabeledBoundingBox();
+		String[] tokens = line.trim().split(",", 6);
+		LabeledBoundingBox bb = new LabeledBoundingBox();
+		if (tokens.length >= 5) {
 			bb.labelName = tokens[0];
 			bb.x = Integer.valueOf(tokens[1]);
 			bb.y = Integer.valueOf(tokens[2]);
 			bb.w = Integer.valueOf(tokens[3]);
 			bb.h = Integer.valueOf(tokens[4]);
-			return bb;
-		} else {
-			return null;
 		}
+		if (tokens.length == 6){
+			bb.extras = tokens[5].trim();
+		}
+		return tokens.length >=5 ? bb : null;
 	}
 	
 	public static LabeledBoundingBox fromPos(String line) {
@@ -81,6 +103,10 @@ public class LabeledBoundingBox {
 			return null;
 		}
 	}
+	
+	public int extrasSize() {
+		return extras == null ? 0: extras.split(",").length;
+	}
 
 	public boolean isWithin(LabeledBoundingBox other) {
 		return x >= other.x && y >= other.y 
@@ -90,5 +116,21 @@ public class LabeledBoundingBox {
 
 	public boolean isValid() {
 		return x >= 0 && y >= 0 && w > 0 && h > 0;
+	}
+
+	public void addExtras(int x, int y, double scaleFactor, int showX, int showY) {
+		float lx = (float) ((x - showX) * scaleFactor - 1 );
+		float ly = (float) ((y - showY) * scaleFactor - 1 );
+		if (extrasSize() <2) {
+			extras +=  String.format("%.4f,%.4f", lx, ly);
+		}
+		else {
+			extras +=  String.format(",%.4f,%.4f", lx, ly);
+		}
+		
+	}
+
+	public void clearLandmarks() {
+		extras = ""; 
 	}
 }

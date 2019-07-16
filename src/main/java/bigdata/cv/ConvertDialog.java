@@ -60,7 +60,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 	 */
 	private static final long serialVersionUID = -7812674426324601391L;
 
-	DataSet dataSet;
+	BoundingBoxDataSet dataSet;
 
 	JTextField tfDatasetPath;
 	
@@ -86,7 +86,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 
 	private JRadioButton rbCaffeMobileYolo;
 	
-	public ConvertDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
+	public ConvertDialog(Frame owner, boolean modal, BoundingBoxDataSet dataSet, LabelConfig labelConfig) {
 		super(owner, "convert label", modal);
 		this.dataSet = dataSet;
 		this.labelConfig = labelConfig;
@@ -108,7 +108,7 @@ public class ConvertDialog extends JDialog implements ItemListener {
 					tfDatasetPath.setText(chooser.getSelectedFile().getAbsolutePath());
 					btnConvert.setEnabled(true);
 					try {
-						dataSet = new DataSet(chooser.getSelectedFile().toPath());
+						dataSet = new BoundingBoxDataSet(chooser.getSelectedFile().toPath());
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
@@ -251,12 +251,12 @@ public class ConvertDialog extends JDialog implements ItemListener {
 			while ((line = reader.readLine()) != null) {
 				LabeledBoundingBox bb = LabeledBoundingBox.from(line);
 				if (bb != null) {
-					double minx = bb.x;
-					double miny = bb.y;
-					double maxx = bb.w  + minx;
-					double maxy = bb.h  + miny;
+					int minx = bb.x;
+					int miny = bb.y;
+					int maxx = bb.w  + minx;
+					int maxy = bb.h  + miny;
 					if (selectedClazz.contains(bb.labelName)) {
-						writer.write(String.format("%s %f %f %f %f", 
+						writer.write(String.format("%s %d %d %d %d", 
 								labelConfig.getAliases(bb.labelName), 
 								minx, miny, maxx, maxy));
 						writer.newLine();

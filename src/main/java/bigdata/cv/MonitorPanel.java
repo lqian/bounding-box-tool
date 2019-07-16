@@ -19,7 +19,10 @@
  */
 package bigdata.cv;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
@@ -34,13 +37,20 @@ public class MonitorPanel extends JPanel {
 	
 	private BufferedImage image;
 	
+	LabeledBoundingBox bb;
+	
 	public void setImage(BufferedImage image) {
 		this.image = image;
 		repaint();
 	}
 	
+	public void setLabeledBoundingBox(LabeledBoundingBox bb) {
+		this.bb = bb;
+	}
+	
 	public void clearImage() {
 		this.image = null;
+		this.bb = null;
 		repaint();
 	}
 
@@ -60,10 +70,29 @@ public class MonitorPanel extends JPanel {
 				setSize(iw, ih);
 				g.drawImage(image, 0, 0,  null);
 			}
+			if (bb != null && bb.extrasSize() > 0) {
+				Graphics2D g2d = (Graphics2D) g;
+				g2d.setColor(Color.MAGENTA);
+				g2d.setStroke(new BasicStroke(3f));
+				drawLandmarks(g2d, bb, s>1?1:s);
+			}
 		}
 		else {
 			g.setColor(this.getParent().getBackground());
 			g.fillRect(0, 0, getWidth(), getHeight());
 		}
 	}
+	
+	void drawLandmarks(Graphics2D g2d, LabeledBoundingBox bb, double scaleFactor) {
+		String tokens[] = bb.extras.split(",",8);
+		for (int i=0; i<tokens.length/2; i++) {
+			int p = i*2; 
+			int x = (int)((Float.valueOf(tokens[p]) - bb.x)*scaleFactor);
+			int y =  (int)((Float.valueOf(tokens[p+1]) - bb.y)*scaleFactor);
+			int radius = (int) (3/ scaleFactor);
+			g2d.drawOval(x, y, radius, radius);
+			g2d.drawString("" + i, x + radius,  y - radius);
+		}
+	}
+	
 }

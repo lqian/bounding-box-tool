@@ -27,17 +27,17 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.store.FSDirectory;
+//import org.apache.lucene.document.Document;
+//import org.apache.lucene.index.DirectoryReader;
+//import org.apache.lucene.index.IndexReader;
+//import org.apache.lucene.store.FSDirectory;
 
 import bigdata.cv.ImageCellRenderer.ImageFile;
-import net.semanticmetadata.lire.builders.DocumentBuilder;
-import net.semanticmetadata.lire.imageanalysis.features.global.ACCID;
-import net.semanticmetadata.lire.searchers.GenericFastImageSearcher;
-import net.semanticmetadata.lire.searchers.ImageSearchHits;
-import net.semanticmetadata.lire.searchers.ImageSearcher;
+//import net.semanticmetadata.lire.builders.DocumentBuilder;
+//import net.semanticmetadata.lire.imageanalysis.features.global.ACCID;
+//import net.semanticmetadata.lire.searchers.GenericFastImageSearcher;
+//import net.semanticmetadata.lire.searchers.ImageSearchHits;
+//import net.semanticmetadata.lire.searchers.ImageSearcher;
 
 /**
  * @author link
@@ -53,7 +53,7 @@ public class ImageSearchPanel extends Panel implements Tool {
 	private JTextArea fileNameTextArea;
 	private JLabel totalImageLabel;
 	private JLabel costLabel;
-	private IndexReader indexReader;
+//	private IndexReader indexReader;
 	
 	SimpleImageFrame frame;
 	
@@ -67,7 +67,7 @@ public class ImageSearchPanel extends Panel implements Tool {
 		
 		if (initialized) return ;
 		
-		indexReader = DirectoryReader.open(FSDirectory.open(Paths.get(indexDir)));
+//		indexReader = DirectoryReader.open(FSDirectory.open(Paths.get(indexDir)));
 		
 		JPanel north = new JPanel();
 		 
@@ -78,7 +78,7 @@ public class ImageSearchPanel extends Panel implements Tool {
 		add(south, BorderLayout.SOUTH);
 		
 		
-		totalImageLabel = new JLabel(String.format("Total Images: %d", indexReader.numDocs()));
+//		totalImageLabel = new JLabel(String.format("Total Images: %d", indexReader.numDocs()));
 		costLabel = new JLabel();
 		south.add(totalImageLabel);
 		south.add(costLabel);
@@ -183,35 +183,35 @@ public class ImageSearchPanel extends Panel implements Tool {
 	}
 
 	void doSearch() throws Exception {
-		int height = getWidth() / 8;
-		imageTable.setRowHeight(height);
-		BufferedImage image = ImageIO.read(new FileInputStream(fileNameTextArea.getText()));
-		long s = System.currentTimeMillis();
-		ImageSearchHits hits = getSearcher().search(image, indexReader);
-		double cost = (System.currentTimeMillis() - s) * .001;
-		costLabel.setText(String.format("search cost: %.3f (seconds)", cost));
-		
-		for (int i = 0; i < hits.length(); i++) {
-			 Document doc = indexReader.document(hits.documentID(i));
-			 String f = doc.get(DocumentBuilder.FIELD_NAME_IDENTIFIER);
-			 int cols = imageModel.getColumnCount();
-			 int row = i / cols;
-			 int col = i % cols;
-			 ImageFile val = new ImageFile();
-			 File input = new File(f);
-			 if (input.exists()) {
-				 val.image = ImageIO.read(input);
-				 val.baseName = Paths.get(f).getFileName().toString();
-				 imageModel.setValueAt(val, row, col);
-			 }
-		}		
-		imageModel.fireTableDataChanged();
+//		int height = getWidth() / 8;
+//		imageTable.setRowHeight(height);
+//		BufferedImage image = ImageIO.read(new FileInputStream(fileNameTextArea.getText()));
+//		long s = System.currentTimeMillis();
+//		ImageSearchHits hits = getSearcher().search(image, indexReader);
+//		double cost = (System.currentTimeMillis() - s) * .001;
+//		costLabel.setText(String.format("search cost: %.3f (seconds)", cost));
+//		
+//		for (int i = 0; i < hits.length(); i++) {
+//			 Document doc = indexReader.document(hits.documentID(i));
+//			 String f = doc.get(DocumentBuilder.FIELD_NAME_IDENTIFIER);
+//			 int cols = imageModel.getColumnCount();
+//			 int row = i / cols;
+//			 int col = i % cols;
+//			 ImageFile val = new ImageFile();
+//			 File input = new File(f);
+//			 if (input.exists()) {
+//				 val.image = ImageIO.read(input);
+//				 val.baseName = Paths.get(f).getFileName().toString();
+//				 imageModel.setValueAt(val, row, col);
+//			 }
+//		}		
+//		imageModel.fireTableDataChanged();
 	}
 	
-	private ImageSearcher getSearcher() {
-       int numResults = 128; 
-       return new GenericFastImageSearcher(numResults, ACCID.class);
-    }
+//	private ImageSearcher getSearcher() {
+//       int numResults = 128; 
+//       return new GenericFastImageSearcher(numResults, ACCID.class);
+//    }
 	
 	class SimpleImageFrame extends JFrame {
 		SimpleImagePanel simpleImagePanel;

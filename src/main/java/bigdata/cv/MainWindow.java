@@ -51,11 +51,14 @@ public class MainWindow implements WindowListener {
 	ClassificationPanel classificationPanel = new ClassificationPanel();
 	BrandPanel brandPanel = new BrandPanel();
 	LabelPanel labelPanel = new LabelPanel();
+	MTCNNPanel mtcnnPanel = new MTCNNPanel();
 	ImageSearchPanel imageSearchPanel = new ImageSearchPanel();
 
 	private JButton btnAbout;
 
 	private JButton labelButton;
+	
+	private JButton mtcnnButton;
 
 	private JButton classificationButton;
 
@@ -120,6 +123,10 @@ public class MainWindow implements WindowListener {
 		toolBar.removeAll();
 		labelButton = iconButton("label.png", "swith label bounding tool");
 		toolBar.add(labelButton);
+		
+		mtcnnButton = iconButton("mtcnn.png", "switch mtcnn label tool");
+		toolBar.add(mtcnnButton);
+		
 		classificationButton = iconButton("classification.png", "open classification dataset");
 		toolBar.add(classificationButton);
 		brandButton = iconButton("vehicle.png", "correct vehicle brand");
@@ -179,9 +186,25 @@ public class MainWindow implements WindowListener {
 
 		});
 		
+		mtcnnButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				current = (Tool)mtcnnPanel;
+//				cardLayout.show(cards, "mtcnnPanel");
+				switchPanel("mtcnnPanel");
+				
+//				
+//				initToolBar();
+//				current.addButtons();
+//				aboutButton();
+//				updateButtonUI();
+			}
+		});
+		
 		labelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				current = (Tool) labelPanel;
 				switchPanel("labelPanel");
 			}
 		});
@@ -205,7 +228,7 @@ public class MainWindow implements WindowListener {
 			current.saveCurrentWork();
 		}
 		cardLayout.show(cards, name);
-		current = (Tool) labelPanel;
+		
 		
 		initToolBar();
 		current.addButtons();
@@ -221,11 +244,13 @@ public class MainWindow implements WindowListener {
 		labelPanel.frame = frame;
 		labelPanel.toolBar = toolBar;
 		brandPanel.toolBar = toolBar;
+		mtcnnPanel.toolBar = toolBar;
 		
 		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
 		frame.getContentPane().add(cards, BorderLayout.CENTER);
 		
 		cards.add(labelPanel, "labelPanel");
+		cards.add(mtcnnPanel, "mtcnnPanel");
 //		cards.add(annotationPanel, "annotationPanel");
 		cards.add(classificationPanel, "classificationPanel");
 		cards.add(brandPanel, "brandPanel");

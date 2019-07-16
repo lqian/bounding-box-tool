@@ -47,7 +47,7 @@ import javax.swing.table.DefaultTableModel;
  *
  */
 @SuppressWarnings({"serial"})
-public class LabelPanel extends JPanel implements Tool {
+public class LabelPanel extends JPanel implements Tool, FilterListener {
 	
 	public LabelPanel() {
 		initialComponents();
@@ -218,7 +218,7 @@ public class LabelPanel extends JPanel implements Tool {
 			}
 
 			@Override
-			public void postSelectedImage(BufferedImage image) {
+			public void postSelectedImage(BufferedImage image, LabeledBoundingBox bb) {
 				monitorPanel.setImage(image);
 			}
 
@@ -237,6 +237,12 @@ public class LabelPanel extends JPanel implements Tool {
 			public void postChangeLabel(int row, LabeledBoundingBox bb) {
 				if (tableModel.getRowCount() > 0 && row > -1)
 					tableModel.setValueAt(bb.boundingBoxString(), row, 1);
+			}
+
+			@Override
+			public void postCtrlPressing(boolean pressed) {
+				// TODO Auto-generated method stub
+				
 			}
 		};
 
@@ -485,10 +491,10 @@ public class LabelPanel extends JPanel implements Tool {
 		}
 	};
 	
-	private JButton btnCleanBoundingBox;
-	private JButton btnRemoveBoundingBox;
+	JButton btnCleanBoundingBox;
+	JButton btnRemoveBoundingBox;
 
-	DataSet dataSet;
+	BoundingBoxDataSet dataSet;
 
 	JButton moveLeft = new JButton("Move Left");
 	JButton moveRight = new JButton("Move Right");
@@ -505,14 +511,14 @@ public class LabelPanel extends JPanel implements Tool {
 	JButton shrinkTop = new JButton("Shrink Top");
 	JButton shinkBottom = new JButton("Shrink Bottom");
 
-	private JButton btnOpen;
-	private JButton btnDelete;
-	private JButton btnConvert;
-	private JButton btnFindByName;
-	private JButton btnFindByClazz;
-	private JButton btnFilter;
-	private JButton btnSave;
-	private JButton btnCorp;
+	JButton btnOpen;
+	JButton btnDelete;
+	JButton btnConvert;
+	JButton btnFindByName;
+	JButton btnFindByClazz;
+	JButton btnFilter;
+	JButton btnSave;
+	JButton btnCorp;
 	
 	JToolBar toolBar;
 	JButton btnOpenClazz;
@@ -522,7 +528,7 @@ public class LabelPanel extends JPanel implements Tool {
 	Set<String> filterClazz = new HashSet<>();
 
 
-	private JButton btnAutoForward;
+	JButton btnAutoForward;
 	JPanel annotationPanel = new JPanel(new BorderLayout());
 
 	private class OpenFileAction extends AbstractAction {
@@ -672,7 +678,7 @@ public class LabelPanel extends JPanel implements Tool {
 
 		public void run() {
 			try {
-				dataSet = new DataSet(path);
+				dataSet = new BoundingBoxDataSet(path);
 				totalFile = dataSet.imageFiles.size();
 				imageFiles = dataSet.imageFiles;
 				labelFiles = dataSet.rawLabelFiles;
@@ -760,7 +766,11 @@ public class LabelPanel extends JPanel implements Tool {
 		toolBar.addSeparator();
 		toolBar.add(btnRemoveBoundingBox);
 		toolBar.add(btnCleanBoundingBox);
-		
+	}
+
+	@Override
+	public String[] clazzNames() {
+		return labelConfig.clazzNames;
 	}
 
 }
