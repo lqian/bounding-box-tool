@@ -40,11 +40,11 @@ import javax.swing.JDialog;
 @SuppressWarnings("serial")
 public class FilterDialog extends JDialog {
 	
-	LabelPanel labelPanel;
+	FilterListener labelPanel;
 	
 	List<JCheckBox> clazzes = new ArrayList<>();
 	
-	public FilterDialog(LabelPanel labelPanel, boolean modal) {
+	public FilterDialog(FilterListener labelPanel, boolean modal) {
 //		super(mainWindow.getParent(), modal);
 		this.labelPanel = labelPanel;  
 	}
@@ -58,7 +58,7 @@ public class FilterDialog extends JDialog {
 		gbc.anchor = GridBagConstraints.WEST; 
 		
 		gbc.gridwidth = 1;
-		String[] clazzNames = labelPanel.labelConfig.clazzNames;
+		String[] clazzNames = labelPanel.clazzNames();
 		for (int i = 0 ; i< clazzNames.length; ++i) {
 			gbc.gridx = i % 8;
 			gbc.gridy = i / 8;

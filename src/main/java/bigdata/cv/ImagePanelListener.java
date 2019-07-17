@@ -41,7 +41,9 @@ public abstract class ImagePanelListener {
 	
 	public abstract void postOpen();
 	
+	public abstract void postCtrlPressing(boolean pressed);
+	
 	public abstract void postChange(BufferedImage image);
 
-	public abstract void postChangeLabel(int selectBoundingBoxIndex, LabeledBoundingBox bb)  ;
+	public abstract void postChangeLabel(int selectBoundingBoxIndex, LabeledBoundingBox bb) ;
 }

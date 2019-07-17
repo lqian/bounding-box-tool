@@ -58,9 +58,9 @@ import javax.swing.SpringLayout;
 @SuppressWarnings({"serial", "unchecked"})
 public class CorpDialog extends JDialog implements ItemListener {
 
-	DataSet source;
+	BoundingBoxDataSet source;
 
-	DataSet target;
+	BoundingBoxDataSet target;
 
 	JTextField sourceTextField;
 
@@ -96,7 +96,7 @@ public class CorpDialog extends JDialog implements ItemListener {
 	
 	LinkedBlockingQueue<String> queue ;
 
-	public CorpDialog(Frame owner, boolean modal, DataSet dataSet, LabelConfig labelConfig) {
+	public CorpDialog(Frame owner, boolean modal, BoundingBoxDataSet dataSet, LabelConfig labelConfig) {
 		super(owner, "corp dataset", modal);
 		this.source = dataSet;
 		this.labelConfig = labelConfig;
@@ -125,10 +125,10 @@ public class CorpDialog extends JDialog implements ItemListener {
 				File selectedFile = chooser.getSelectedFile();
 				try {
 					if (isSource) {
-						source = new DataSet(selectedFile.toPath());
+						source = new BoundingBoxDataSet(selectedFile.toPath());
 						sourceTextField.setText(selectedFile.getAbsolutePath());
 					} else {
-						target = new DataSet(selectedFile.toPath(), false);
+						target = new BoundingBoxDataSet(selectedFile.toPath(), false);
 						targetTextField.setText(selectedFile.getAbsolutePath());
 					}
 					int sl = sourceTextField.getText().length();
