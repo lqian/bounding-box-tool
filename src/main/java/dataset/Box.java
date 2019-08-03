@@ -19,4 +19,10 @@ class Box  {
 				Integer.parseInt(tokens[2]), 
 				Integer.parseInt(tokens[3]));
 	}
+
+	@Override
+	public String toString() {
+		return "Box [x=" + x + ", y=" + y + ", w=" + w + ", h=" + h + "]";
+	}
+	 
 }

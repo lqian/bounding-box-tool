@@ -23,17 +23,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.opencv.utils.Converters;
 
 import javax.imageio.ImageIO;
 
-import org.bytedeco.opencv.opencv_core.Point2f;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+//import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.highgui.HighGui;;
+import org.opencv.utils.Converters;;
 
 public class CorpPlateByColor {
 
@@ -81,7 +80,7 @@ public class CorpPlateByColor {
 		//				+ " where substring(plate_nbr, 1,1) =? and plate_color=1 limit 100" );
 
 		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
-				+ " where  plate_color=?  limit 3000000");
+				+ " where  plate_color=?  limit 1000");
 
 		// 普通黑牌
 		//		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
@@ -137,14 +136,14 @@ public class CorpPlateByColor {
 		rs.close();
 	}
 
-	static int randXOffset(float w) {
+	public static int randXOffset(float w) {
 		int halfCharSize = (int) (Math.floor(w/12) + 1);
 		int rw = rand.nextInt(halfCharSize);
 		int sign = rand.nextInt(2) == 0 ? -1: 1;
 		return sign * rw;
 	}
 
-	static int randYOffset(float height) {
+	public static int randYOffset(float height) {
 		int sign = rand.nextInt(2) == 0 ? -1: 1;
 		int halfCharSize =  (int) (Math.floor(height/4) + 1);
 		if (sign < 0) {
@@ -154,9 +153,21 @@ public class CorpPlateByColor {
 		return sign * rw;
 	}
 
-	static Mat augPlate(Mat img, Box vehicleBox, Box plateBox, boolean debug) {
+	public static Mat augPlate(Mat img, Box vehicleBox, Box plateBox, boolean debug) {
+		int rh = (rand.nextInt(18) + 1) /2;
+		int rw = (rand.nextInt(20) + 1) /2;
+		// expand  random 0 - 15 pixel outer
+		int w = img.cols();
+		int h = img.rows();
 		plateBox.x -= vehicleBox.x;
 		plateBox.y -= vehicleBox.y;
+
+		plateBox.w += rw*2;
+		plateBox.h += rh*2;
+		plateBox.x -= rw;
+		plateBox.y -= rh;
+		
+		if (plateBox.x < 0 || plateBox.y < 0 || plateBox.x + plateBox.w > w || plateBox.y + plateBox.h > h ) return null;
 
 		Point p0 = new Point(plateBox.x + randXOffset(plateBox.w), plateBox.y + randYOffset(plateBox.h));
 		Point p1 = new Point(plateBox.x + plateBox.w + randXOffset(plateBox.w), plateBox.y + randYOffset(plateBox.h));
@@ -172,7 +183,7 @@ public class CorpPlateByColor {
 			Imgproc.circle(img, p1, 3, color);
 			Imgproc.circle(img, p2, 3, color);
 			Imgproc.circle(img, p3, 3, color);
-			HighGui.imshow("rect and points", img); 
+//			HighGui.imshow("rect and points", img); 
 		}
 
 		if (p0.x < 0) p0.x = 0;
@@ -198,6 +209,8 @@ public class CorpPlateByColor {
 		Imgproc.warpPerspective(img, dstMat, perspectiveMmat, dstMat.size(), Imgproc.INTER_LINEAR);
 		return dstMat;
 	}
+	
+	
 	BufferedImage augmentPlate(BufferedImage img, Box vehicleBox, Box plateBox) {
 		int rh = (rand.nextInt(18) + 1) /2;
 		int rw = (rand.nextInt(20) + 1) /2;
@@ -230,7 +243,7 @@ public class CorpPlateByColor {
 	}
 
 	class Worker implements Runnable {
-
+		int innerCounter = 0;
 		@Override
 		public void run() {
 			while (!putover.get()) {
@@ -242,11 +255,11 @@ public class CorpPlateByColor {
 						Box plateBox = pd.plateBox;
 						Box vehicleBox = pd.vehicleBox;
 						if (Files.exists(source) && plateBox != null && vehicleBox != null) {
-							if (perspectiveTransform) {
+							if (++innerCounter % 4 == 0) {
 								Mat img = Imgcodecs.imread(source.toString());
 								if (img.empty()) continue;
 								Mat dst = augPlate(img, vehicleBox, plateBox, false);
-								if (!dst.empty()) {
+								if (dst!=null && !dst.empty()) {
 									int seq = counter.incrementAndGet();
 									int sub = seq / 10000;
 									int no = seq % 10000;								 
@@ -329,6 +342,9 @@ public class CorpPlateByColor {
 	 * @throws  
 	 */
 	public static void main(String[] args) throws Exception {
+		nu.pattern.OpenCV.loadShared();
+		System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+		
 		Path target = Paths.get(args[0]);
 		Connection cnn = Util.createConn();
 		Path label = Paths.get(args[2]);

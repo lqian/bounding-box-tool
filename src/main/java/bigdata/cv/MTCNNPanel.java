@@ -260,7 +260,6 @@ public class MTCNNPanel extends JPanel implements Tool, FilterListener {
 				lblCTRLPressed.setText(pressed ? "CTRL" : "");
 			}
 		};
-		
 		tblBoudingBox.getSelectionModel().addListSelectionListener(boundingBoxListSelectionListener);
 		
 		btnRemoveBoundingBox.addActionListener(new ActionListener() {
@@ -329,7 +328,6 @@ public class MTCNNPanel extends JPanel implements Tool, FilterListener {
 				}
 			}
 		});
-		
 		btnAutoForward.addActionListener(new ActionListener() {
 
 			@Override

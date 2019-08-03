@@ -1,7 +1,6 @@
 package dataset;
 
 import java.awt.image.BufferedImage;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,7 +19,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.imageio.ImageIO;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
+
 
 public class PlateColor {
 	
@@ -97,6 +98,13 @@ public class PlateColor {
 	}
 
 	
+	/**
+	 * @deprecated
+	 * @param img
+	 * @param vehicleBox
+	 * @param plateBox
+	 * @return
+	 */
 	 BufferedImage augmentPlate(BufferedImage img, Box vehicleBox, Box plateBox) {
 		 int rh = (rand.nextInt(18) + 1) /2;
 		 int rw = (rand.nextInt(20) + 1) /2;
@@ -139,11 +147,11 @@ public class PlateColor {
 						Box plateBox = pd.plateBox;
 						Box vehicleBox = pd.vehicleBox;
 						if (Files.exists(source) && plateBox != null && vehicleBox != null) {
-							BufferedImage img = ImageIO.read(source.toFile());
-							if (img == null || img.getHeight() == 0 || img.getWidth() == 0) continue;
-							BufferedImage plateImg = augmentPlate(img, vehicleBox, plateBox);
-							if (plateImg != null) {
-								ImageIO.write(plateImg, "JPG", pd.catalog.resolve(String.format("%09d.jpg", counter.incrementAndGet())).toFile()); 
+							Mat img = Imgcodecs.imread(source.toString());
+							if (img.empty()) continue;
+							Mat dst = CorpPlateByColor.augPlate(img, vehicleBox, plateBox, false);
+							if (dst != null && !dst.empty()) {
+								Imgcodecs.imwrite(pd.catalog.resolve(String.format("%09d.jpg", counter.incrementAndGet())).toString(), dst); 
 							}
 						}
 					}
