@@ -22,6 +22,8 @@ package bigdata.cv;
 import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 
+import java.util.ArrayList;
+
 /**
  * 
  * @author qian xiafei
