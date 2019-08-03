@@ -34,6 +34,25 @@
 			<artifactId>mysql-connector-java</artifactId>
 			<version>5.1.26</version>
 		</dependency>
+		
+<!-- 		<dependency> -->
+<!--   <groupId>org.bytedeco.javacpp-presets</groupId> -->
+<!--   <artifactId>opencv</artifactId> -->
+<!--   <version>3.4.2-1.4.2</version> -->
+<!-- </dependency> -->
+
+<dependency>
+    <groupId>org.openpnp</groupId>
+    <artifactId>opencv</artifactId>
+    <version>3.2.0-1</version>
+</dependency>
+
+
+<dependency>
+  <groupId>org.bytedeco</groupId>
+  <artifactId>opencv-platform</artifactId>
+  <version>4.1.0-1.5.1</version>
+</dependency>
 
 <!-- 		<dependency> -->
 <!-- 			<groupId>org.apache.lucene</groupId> -->

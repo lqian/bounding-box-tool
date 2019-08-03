@@ -1,5 +1,6 @@
 package dataset;
 
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -82,6 +83,7 @@ public class ExportPlate {
 				if (Files.exists(target)) return;
 				String tokens[] = platePosistion.split("[\\s,]", 4);
 				if (tokens.length == 4) {
+					AffineTransform affineTransform = new AffineTransform();
 					int x = Integer.valueOf(tokens[0]);
 					int y = Integer.valueOf(tokens[1]);
 					int w = Integer.valueOf(tokens[2]);
