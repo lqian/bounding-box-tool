@@ -29,6 +29,7 @@ import javax.imageio.ImageIO;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.highgui.HighGui;
 //import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -36,11 +37,16 @@ import org.opencv.utils.Converters;;
 
 public class CorpPlateByColor {
 
+	static int H = 32;
+	static int W = 128;
 	Path dataroot;
+	String metaList;
+	String datasetName;
 
 	Connection conn;
 
 	List<String> colors;
+	List<String> provinces;
 
 	Map<String, Integer> labelMap = new HashMap<>();
 
@@ -58,16 +64,27 @@ public class CorpPlateByColor {
 
 	LinkedBlockingQueue<PlateData> completedQueue = new LinkedBlockingQueue<>(5000);
 
-	AtomicInteger counter;
+	AtomicInteger counter; 
 
 	boolean perspectiveTransform = true;
 
-	public CorpPlateByColor(Path target, Connection conn, int startSeq, Path label) throws SQLException, IOException {
+	/**
+	 * remove int startSeq,
+	 * @param target
+	 * @param datasetName
+	 * @param conn
+	 * @param label
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public CorpPlateByColor(Path target, String datasetName, Connection conn,  Path label) throws SQLException, IOException {
 		super();
 		this.dataroot = target;
+		
 		this.conn = conn;
+		this.datasetName = datasetName;
 		counter = new AtomicInteger(0);
-
+		metaList = dataroot.resolve(datasetName +".list").toAbsolutePath().toString();
 		BufferedReader reader = Files.newBufferedReader(label);
 		String key;
 		int id =0;
@@ -79,14 +96,17 @@ public class CorpPlateByColor {
 		//		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
 		//				+ " where substring(plate_nbr, 1,1) =? and plate_color=1 limit 100" );
 
+		
 		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
-				+ " where  plate_color=?  limit 1000");
+				+ " where  plate_color=?  and province=? limit 300000"); //3060000
 
 		// 普通黑牌
 		//		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
 		//				+ "where plate_color=3 and instr(plate_nbr, '粤') = 1 and substring(plate_nbr, 1,1) =? limit 2000");
 
 		colors = Arrays.asList("0", "1", "2", "3", "4", "5", "6");
+		provinces = Arrays.asList("云", "京", "冀", "吉", "宁", "川", "新", "晋", "桂", "沪", "津", "浙", "渝", "湘", "琼", "甘", "皖",
+				"粤", "苏", "蒙", "藏", "豫", "贵", "赣", "辽", "鄂", "闽", "陕", "青", "鲁", "黑");
 	}
 
 	public void doDataset() throws Exception {
@@ -101,13 +121,18 @@ public class CorpPlateByColor {
 		//			colors.add(color);
 		//		}
 		//		rs.close();
-		int workerNum = 8;
+		int workerNum = 12;
 		latch = new CountDownLatch(workerNum);
 		service.execute(new MetaWriter());
 		for (int i=0; i<workerNum; i++) service.execute(new Worker());
-		for (int i=0; i<colors.size(); i++) {
-			provinceCatalog(i);
+		
+		for (int i=0; i<2; i++) { //only  0,1 
+			doublePlate(i);
 		}
+//		doublePlate();
+//		for (int i=0; i<colors.size(); i++) {
+//			colorCatalog(i);
+//		}
 
 		putover.set(true);
 		pstm.close();
@@ -115,15 +140,7 @@ public class CorpPlateByColor {
 		service.shutdown();
 	}
 
-	public void provinceCatalog(int id) throws Exception {
-		Path catalog = dataroot.resolve(String.format("%02d", id));
-		if (Files.notExists(catalog)) {
-			Files.createDirectories(catalog);
-		}
-		String province = colors.get(id);
-		pstm.setString(1, province);
-		ResultSet rs = pstm.executeQuery();
-		int c = 0;
+	void appendData(ResultSet rs, Path catalog, int plateColor)  throws Exception {
 		while (rs.next()) {
 			PlateData pd = new PlateData();
 			pd.catalog = catalog;
@@ -131,18 +148,65 @@ public class CorpPlateByColor {
 			pd.plateBox = Box.parse(rs.getString("plate_position"));
 			pd.vehicleBox = Box.parse(rs.getString("vehicle_position"));
 			pd.plateNbr = rs.getString("plate_nbr");
+			pd.plateColor = plateColor;
 			queue.put(pd);
 		}
+	}
+	
+	public void doublePlate(int id) throws Exception {
+		Path catalog = dataroot.resolve(datasetName).resolve(String.format("%02d", id));
+		pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
+				+ " where  plate_color=? and plate_height/plate_width> .3");
+		pstm.setInt(1, id);
+		ResultSet rs = pstm.executeQuery();
+		appendData(rs, catalog, id);
 		rs.close();
 	}
+	public void colorCatalog(int id) throws Exception {
+		Path catalog = dataroot.resolve(datasetName).resolve(String.format("%02d", id));
+		if (Files.notExists(catalog)) {
+			Files.createDirectories(catalog);
+		}
+		String colorId = colors.get(id);
+		if (colorId.equals("2") || colorId.equals("1")) {
+			pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
+					+ " where  plate_color=?  and province=? limit 300000"); //3060000
+			for (String p: provinces) {
+				pstm.setString(1, colorId);
+				pstm.setString(2, p);
+				ResultSet rs = pstm.executeQuery();
+				appendData(rs, catalog, id);
+				rs.close();
+			}
+		}
+		else {
+			pstm = conn.prepareStatement("select path, plate_nbr, vehicle_position, plate_position from vehicle_dataset "
+					+ " where  plate_color=? limit 300000"); 
+			pstm.setString(1, colorId);
+			ResultSet rs = pstm.executeQuery();
+			appendData(rs, catalog, id);
+			rs.close();
+		}
+	}
 
-	public static int randXOffset(float w) {
-		int halfCharSize = (int) (Math.floor(w/12) + 1);
-		int rw = rand.nextInt(halfCharSize);
+	/**
+	 * @deprecated
+	 * @param max
+	 * @return
+	 */
+	public static int randXOffset(float max) {
 		int sign = rand.nextInt(2) == 0 ? -1: 1;
+		int halfCharSize = (int) (Math.floor(max/12) + 1);
+		int rw = rand.nextInt(halfCharSize);
+		
 		return sign * rw;
 	}
 
+	/**
+	 * @deprecated
+	 * @param height
+	 * @return
+	 */
 	public static int randYOffset(float height) {
 		int sign = rand.nextInt(2) == 0 ? -1: 1;
 		int halfCharSize =  (int) (Math.floor(height/4) + 1);
@@ -153,15 +217,21 @@ public class CorpPlateByColor {
 		return sign * rw;
 	}
 
-	public static Mat augPlate(Mat img, Box vehicleBox, Box plateBox, boolean debug) {
-		int rh = (rand.nextInt(18) + 1) /2;
-		int rw = (rand.nextInt(20) + 1) /2;
+	static float randomRange(float low, float hight) {
+		int max = (int)Math.floor(hight - low);
+		int r = rand.nextInt(max);
+		return r - low;
+	}
+	public static Mat perspectiveTransAugment(Mat img, Box vehicleBox, Box plateBox, boolean debug) {
+		
 		// expand  random 0 - 15 pixel outer
 		int w = img.cols();
 		int h = img.rows();
+		int rh = w / 10;
+		int rw = h / 16;
 		plateBox.x -= vehicleBox.x;
-		plateBox.y -= vehicleBox.y;
-
+		plateBox.y -= vehicleBox.y; 
+		
 		plateBox.w += rw*2;
 		plateBox.h += rh*2;
 		plateBox.x -= rw;
@@ -169,11 +239,13 @@ public class CorpPlateByColor {
 		
 		if (plateBox.x < 0 || plateBox.y < 0 || plateBox.x + plateBox.w > w || plateBox.y + plateBox.h > h ) return null;
 
-		Point p0 = new Point(plateBox.x + randXOffset(plateBox.w), plateBox.y + randYOffset(plateBox.h));
-		Point p1 = new Point(plateBox.x + plateBox.w + randXOffset(plateBox.w), plateBox.y + randYOffset(plateBox.h));
-		Point p2 = new Point(plateBox.x  + plateBox.w  + randXOffset(plateBox.w), plateBox.y + plateBox.h + randYOffset(plateBox.h));
-		Point p3 = new Point(plateBox.x + randXOffset(plateBox.w) , plateBox.y + plateBox.h + randYOffset(plateBox.h));
-
+		Point p0 = new Point(plateBox.x + randomRange(-rw*2, rw), plateBox.y + randomRange(-rh*2, rh));
+		Point p1 = new Point(plateBox.x + plateBox.w + randomRange(-rw, rw*2), plateBox.y + randomRange(-rh*2, rh));
+		Point p2 = new Point(plateBox.x  + plateBox.w  + randomRange(-rw, rw*2), plateBox.y + plateBox.h + randomRange(-rh, rh*2));
+		Point p3 = new Point(plateBox.x + randomRange(-rw*2, rw) , plateBox.y + plateBox.y + randomRange(-rh, rh*2));
+		
+		if (p0.x<0 || p0.y<0 || p1.x>w || p1.y < 0 || p2.x > 2 || p2.y>h || p3.x < 0 || p3.y > h) return null;
+		
 		if (debug) {
 			Scalar color = new Scalar(0, 15, 235);
 			Point pt1 = new Point(plateBox.x, plateBox.y);
@@ -183,33 +255,32 @@ public class CorpPlateByColor {
 			Imgproc.circle(img, p1, 3, color);
 			Imgproc.circle(img, p2, 3, color);
 			Imgproc.circle(img, p3, 3, color);
-//			HighGui.imshow("rect and points", img); 
+			HighGui.imshow("rect and points", img); 
 		}
 
-		if (p0.x < 0) p0.x = 0;
-		if (p0.y < 0) p0.y = 0;
-		if (p1.y < 0) p1.y = 0;
-		if (p1.x > vehicleBox.w-1) p1.x = vehicleBox.w - 1;
-		if (p2.x > vehicleBox.w - 1) p2.x = vehicleBox.w - 1;
-		if (p2.y > vehicleBox.y - 1) p2.y = vehicleBox.y - 1;
-		if (p3.x < 0) p3.x = 0;
-		if (p3.y > vehicleBox.h - 1) p3.y = vehicleBox.h - 1;
+//		if (p0.x < 0) p0.x = 0;
+//		if (p0.y < 0) p0.y = 0;
+//		if (p1.y < 0) p1.y = 0;
+//		if (p1.x > vehicleBox.w-1) p1.x = vehicleBox.w - 1;
+//		if (p2.x > vehicleBox.w - 1) p2.x = vehicleBox.w - 1;
+//		if (p2.y > vehicleBox.y - 1) p2.y = vehicleBox.y - 1;
+//		if (p3.x < 0) p3.x = 0;
+//		if (p3.y > vehicleBox.h - 1) p3.y = vehicleBox.h - 1;
 		//random half-char size of width and 1/8 ~ 1/4 char-size of height
 
 		Point dp0 = new Point(0, 0);
-		Point dp1 = new Point(128, 0);
-		Point dp2 = new Point(128, 32);
-		Point dp3 = new Point(0, 32);
+		Point dp1 = new Point(W, 0);
+		Point dp2 = new Point(W, H);
+		Point dp3 = new Point(0, H);
 
 		List<Point>src = Arrays.asList(p0, p1, p2, p3);
 		List<Point>dst = Arrays.asList(dp0, dp1, dp2, dp3);
-		Mat dstMat = new Mat(32, 128, img.type());
+		Mat dstMat = new Mat(H, W, img.type());
 		Mat perspectiveMmat = Imgproc.getPerspectiveTransform(Converters.vector_Point2f_to_Mat(src),
 				Converters.vector_Point2f_to_Mat(dst));
 		Imgproc.warpPerspective(img, dstMat, perspectiveMmat, dstMat.size(), Imgproc.INTER_LINEAR);
 		return dstMat;
-	}
-	
+	} 
 	
 	BufferedImage augmentPlate(BufferedImage img, Box vehicleBox, Box plateBox) {
 		int rh = (rand.nextInt(18) + 1) /2;
@@ -235,6 +306,7 @@ public class CorpPlateByColor {
 	}
 	class PlateData {
 		String plateNbr;
+		int plateColor;
 		Path catalog;
 		Path source;
 		Path target;
@@ -258,12 +330,12 @@ public class CorpPlateByColor {
 							if (++innerCounter % 4 == 0) {
 								Mat img = Imgcodecs.imread(source.toString());
 								if (img.empty()) continue;
-								Mat dst = augPlate(img, vehicleBox, plateBox, false);
+								Mat dst = perspectiveTransAugment(img, vehicleBox, plateBox, false);
 								if (dst!=null && !dst.empty()) {
 									int seq = counter.incrementAndGet();
 									int sub = seq / 10000;
 									int no = seq % 10000;								 
-									pd.target = Paths.get(String.format("%s/%06d/%06d.jpg", pd.catalog, sub, no));
+									pd.target = Paths.get(String.format("%s/%06d/%06d-%s.jpg", pd.catalog, sub, no, pd.plateNbr));
 									Path dir = pd.target.getParent();
 									if (Files.notExists(dir)) Files.createDirectories(dir);
 									Imgcodecs.imwrite(pd.target.toString(), dst); 
@@ -278,7 +350,7 @@ public class CorpPlateByColor {
 									int seq = counter.incrementAndGet();
 									int sub = seq / 10000;
 									int no = seq % 10000;								 
-									pd.target = Paths.get(String.format("%s/%06d/%06d.jpg", pd.catalog, sub, no));
+									pd.target = Paths.get(String.format("%s/%06d/%06d-%s.jpg", pd.catalog, sub, no, pd.plateNbr));
 									Path dir = pd.target.getParent();
 									if (Files.notExists(dir)) Files.createDirectories(dir);
 									ImageIO.write(plateImg, "JPG", pd.target.toFile()); 
@@ -298,25 +370,25 @@ public class CorpPlateByColor {
 
 	class MetaWriter implements Runnable {
 
-		String convertAsLabel(String plateNbr) {
+		String convertAsLabel(String plateNbr, int plateColor) {
 			StringBuilder label = new StringBuilder();
 			int len = plateNbr.length();
 			for (int i=0; i<len && i < 8; i++) {
 				label.append(labelMap.get(plateNbr.substring(i, i+1)) + " ");	
 			}
 			for (int i=0; i<8-len; i++) label.append("0 ");
-			return label.toString();
+			return String.format("%s %02d", label.toString(), plateColor);
 		}
 
 		@Override
 		public void run() {
 			int c = 0;
-			try (BufferedWriter meta = Files.newBufferedWriter(Paths.get("meta.list"))){
+			try (BufferedWriter meta = Files.newBufferedWriter(Paths.get(metaList))){
 				while(latch.getCount() > 0) {
 					PlateData pd = null;
 					try {
 						while ((pd = completedQueue.poll(100, TimeUnit.MICROSECONDS))!= null) {
-							meta.write(dataroot.relativize(pd.target).toString() + " " + convertAsLabel(pd.plateNbr));
+							meta.write(dataroot.relativize(pd.target).toString() + " " + convertAsLabel(pd.plateNbr, pd.plateColor));
 							meta.newLine();
 							c++;
 
@@ -346,9 +418,13 @@ public class CorpPlateByColor {
 		System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
 		
 		Path target = Paths.get(args[0]);
+		if (Files.notExists(target)) {
+			Files.createDirectories(target);
+		}
+		String datasetName = args[1];
 		Connection cnn = Util.createConn();
 		Path label = Paths.get(args[2]);
-		new CorpPlateByColor(target, cnn, Integer.valueOf(args[1]), label).doDataset();
+		new CorpPlateByColor(target, datasetName, cnn, label).doDataset();
 		cnn.close();
 	}
 

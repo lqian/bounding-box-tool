@@ -37,7 +37,7 @@ public class PlateColor {
 	
 	AtomicBoolean putover = new AtomicBoolean(false);
 	
-	ExecutorService service = Executors.newFixedThreadPool(8);
+	ExecutorService service = Executors.newFixedThreadPool(4);
 	
 	CountDownLatch latch;
 	
@@ -141,7 +141,7 @@ public class PlateColor {
 			while (!putover.get()) {
 				PlateData pd = null;
 				try {
-					while ((pd = queue.poll(100, TimeUnit.MICROSECONDS))!= null)
+					while ((pd = queue.poll(10000, TimeUnit.MICROSECONDS))!= null)
 					{
 						Path source = pd.source;
 						Box plateBox = pd.plateBox;
@@ -149,7 +149,7 @@ public class PlateColor {
 						if (Files.exists(source) && plateBox != null && vehicleBox != null) {
 							Mat img = Imgcodecs.imread(source.toString());
 							if (img.empty()) continue;
-							Mat dst = CorpPlateByColor.augPlate(img, vehicleBox, plateBox, false);
+							Mat dst = CorpPlateByColor.perspectiveTransAugment(img, vehicleBox, plateBox, false);
 							if (dst != null && !dst.empty()) {
 								Imgcodecs.imwrite(pd.catalog.resolve(String.format("%09d.jpg", counter.incrementAndGet())).toString(), dst); 
 							}
@@ -164,6 +164,8 @@ public class PlateColor {
 	 }
 	 
 	public static void main(String[] args) throws Exception {
+nu.pattern.OpenCV.loadShared();
+		System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
 		Path target = Paths.get(args[0]);
 		Connection cnn = Util.createConn();
 		new PlateColor(target, cnn).doDataset();

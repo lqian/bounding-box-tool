@@ -222,6 +222,34 @@ public class MTCNNImagePanel extends JPanel implements KeyListener, MouseListene
 			}
 		}
 	}
+	
+	/**
+	 * support parse plate color and plate nbr from file name. only support one plate
+	 */
+	public void confirmPlateNbr() {
+		if (boundingBoxes.size() > 1) {
+			JOptionPane.showMessageDialog(this, "not support!", "MTCNN", JOptionPane.WARNING_MESSAGE);
+			return ;
+		}
+		
+		int s = imageFile.indexOf("__");
+		if (s != -1) {
+			int e = imageFile.lastIndexOf("__");
+			if (e != -1) {
+				String sub = imageFile.substring(s+2, e);
+				if (sub.equalsIgnoreCase("NoPlate")) {
+					return ;
+				}
+				else {
+					String tokens[] = sub.split("_");
+					workingBoudingBox.plateColor = tokens[0];
+					workingBoudingBox.plateNbr = tokens[1];
+					saveLabelsToFile();
+					repaint();
+				}
+			}
+		}		
+	}
 
 	public void removeBoundingBox(int i) {
 		selectBoundingBoxIndex = -1;
@@ -316,10 +344,31 @@ public class MTCNNImagePanel extends JPanel implements KeyListener, MouseListene
 				g2d.setStroke(new BasicStroke(3f));
 				g2d.drawRect(showX + bx, showY + by, bw, bh);
 				
-				if (bb.extras != null) {
+				if (bb.landmark != null) {
 					drawLandmarks(g2d, bb, scaleFactor);
 				}
-
+				
+				if (bb.plateNbr != null && bb.plateNbr.length() > 0) {
+					g2d.setFont(new Font(Font.MONOSPACED, Font.BOLD, 20));
+					g2d.drawString(bb.plateNbr, showX+bx, showY + by + bh + 25);
+				}
+				else {
+					int s = imageFile.indexOf("__");
+					if (s != -1) {
+						int e = imageFile.lastIndexOf("__");
+						if (e != -1) {
+							String sub = imageFile.substring(s+2, e);
+							if (!sub.equalsIgnoreCase("NoPlate")) {
+								String tokens[] = sub.split("_");
+								g2d.setColor(Color.WHITE);
+								g2d.setFont(new Font(Font.MONOSPACED, Font.BOLD, 20));
+								g2d.drawString(tokens[1], showX+bx, showY + by + bh + 25);
+							}
+						}
+					}		
+				}
+				
+				
 				if (image != null) {
 					int iw = image.getWidth();
 					int ih = image.getHeight();
@@ -353,8 +402,8 @@ public class MTCNNImagePanel extends JPanel implements KeyListener, MouseListene
 	}
 	
 	void drawLandmarks(Graphics2D g2d, LabeledBoundingBox bb, double scaleFactor) {
-		String tokens[] = bb.extras.split(",",8);
-		for (int i=0; i<tokens.length/2; i++) {
+		String tokens[] = bb.landmark.split(",");
+		for (int i=0; i< 4; i++) {
 			int p = i*2; 
 			int x = (int)( Float.valueOf(tokens[p]) / scaleFactor);
 			int y =  (int)(Float.valueOf(tokens[p+1]) / scaleFactor);

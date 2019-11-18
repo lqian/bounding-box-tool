@@ -84,8 +84,8 @@ public class MonitorPanel extends JPanel {
 	}
 	
 	void drawLandmarks(Graphics2D g2d, LabeledBoundingBox bb, double scaleFactor) {
-		String tokens[] = bb.extras.split(",",8);
-		for (int i=0; i<tokens.length/2; i++) {
+		String tokens[] = bb.landmark.split(",");
+		for (int i=0; i<4; i++) {
 			int p = i*2; 
 			int x = (int)((Float.valueOf(tokens[p]) - bb.x)*scaleFactor);
 			int y =  (int)((Float.valueOf(tokens[p+1]) - bb.y)*scaleFactor);

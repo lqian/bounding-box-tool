@@ -34,9 +34,13 @@ public class LabeledBoundingBox {
 	public int x, y;
 	public int w, h;
 	
-	public String  extras = "" ;
+	public String  landmark = "" ;  // comma split
 
 	public String labelName; // label name of bounding box,
+	
+	public String plateColor = "";
+	
+	public String plateNbr = "";
 
 	public static LabeledBoundingBox wrap(String labelName, int x1, int y1, int x2, int y2, double scaleFactor,
 			int showX, int showY) {
@@ -57,19 +61,21 @@ public class LabeledBoundingBox {
 		bb.y = (int) floor(((y1 < y2 ? y1 : y2) - showY) * scaleFactor);
 		bb.w = (int) floor(abs(x1 - x2) * scaleFactor);
 		bb.h = (int) floor(abs(y1 - y2) * scaleFactor);
-		bb.extras = extras;
+		bb.landmark = extras;
 		return bb;
 	}
 	
 
 	@Override
 	public String toString() {
-		if (extras == null || extras.equals("")) {
-			return String.format("%s,%d,%d,%d,%d", labelName, x, y, w, h);
+		String val = String.format("%s,%d,%d,%d,%d", labelName, x, y, w, h);
+		if (landmark != null && !landmark.equals("")) {
+			val += "," + landmark;			
 		}
-		else {
-			return String.format("%s,%d,%d,%d,%d,%s", labelName, x, y, w, h, extras);
+		if (plateColor!=null && ! plateColor.equalsIgnoreCase("") && plateNbr!=null && !plateNbr.equals("")) {
+			val += "," + plateColor + "," + plateNbr;
 		}
+		return val;
 	}
 
 	public String boundingBoxString() {
@@ -87,7 +93,15 @@ public class LabeledBoundingBox {
 			bb.h = Integer.valueOf(tokens[4]);
 		}
 		if (tokens.length == 6){
-			bb.extras = tokens[5].trim();
+			String subs[] = tokens[5].split(",");
+			if (subs.length == 8) {
+				bb.landmark = tokens[5].trim();
+			}
+			else if (subs.length == 10) {
+				bb.plateColor = subs[8];
+				bb.plateNbr = subs[9];
+				bb.landmark = String.format("%s,%s,%s,%s,%s,%s,%s,%s", subs[0], subs[1], subs[2], subs[3], subs[4], subs[5], subs[6], subs[7]);
+			}
 		}
 		return tokens.length >=5 ? bb : null;
 	}
@@ -107,7 +121,7 @@ public class LabeledBoundingBox {
 	}
 	
 	public int extrasSize() {
-		return extras == null ? 0: extras.split(",").length;
+		return landmark == null ? 0: landmark.split(",").length;
 	}
 
 	public boolean isWithin(LabeledBoundingBox other) {
@@ -124,15 +138,15 @@ public class LabeledBoundingBox {
 		float lx = (float) ((x - showX) * scaleFactor - 1 );
 		float ly = (float) ((y - showY) * scaleFactor - 1 );
 		if (extrasSize() <2) {
-			extras +=  String.format("%.4f,%.4f", lx, ly);
+			landmark +=  String.format("%.4f,%.4f", lx, ly);
 		}
 		else {
-			extras +=  String.format(",%.4f,%.4f", lx, ly);
+			landmark +=  String.format(",%.4f,%.4f", lx, ly);
 		}
 		
 	}
 
 	public void clearLandmarks() {
-		extras = ""; 
+		landmark = ""; 
 	}
 }

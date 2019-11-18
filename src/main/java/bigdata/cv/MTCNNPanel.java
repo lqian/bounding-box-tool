@@ -102,6 +102,8 @@ public class MTCNNPanel extends JPanel implements Tool, FilterListener {
 		
 		btnRemainOne = iconButton("remove_all.png", "inverse remove bounding labels");
 		btnRemainOne.setMnemonic(KeyEvent.VK_D); // ALT + D
+		
+		btnConfirmNbr = iconButton("mark_as_correct.png", "confirm the plate number");
 
 		add(annotationPanel, BorderLayout.CENTER);
 		JPanel centerPanel = new JPanel();
@@ -473,6 +475,15 @@ public class MTCNNPanel extends JPanel implements Tool, FilterListener {
 				mtcnnImagePanel.requestFocusInWindow();
 			}
 		});
+		
+		btnConfirmNbr.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				mtcnnImagePanel.confirmPlateNbr();				
+			}
+			
+		});
 	}
 
 	JFrame frame;
@@ -531,6 +542,7 @@ public class MTCNNPanel extends JPanel implements Tool, FilterListener {
 	
 	JButton btnCleanLandmark;
 	JButton btnRemainOne;
+	JButton btnConfirmNbr;
 	JButton btnRemoveBoundingBox;
 
 	DataSet dataSet;
@@ -808,9 +820,11 @@ public class MTCNNPanel extends JPanel implements Tool, FilterListener {
 		toolBar.add(btnAutoForward);
 		
 		toolBar.addSeparator();
+		toolBar.add(btnConfirmNbr);
 		toolBar.add(btnCleanLandmark);
 		toolBar.add(btnRemoveBoundingBox);
 		toolBar.add(btnRemainOne);
+		
 	}
 
 	@Override
